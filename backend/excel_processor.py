@@ -28,21 +28,20 @@ class ExcelProcessor:
             True nếu đọc thành công, False nếu thất bại
         """
         try:
-            # Đọc 3 sheets
-            excel_file = pd.ExcelFile(file_path)
+            # Đọc 3 sheets với context manager để đảm bảo file được đóng
+            with pd.ExcelFile(file_path) as excel_file:
+                # Kiểm tra các sheet cần thiết
+                required_sheets = ['CDKT', 'BCTN', 'LCTT']
+                available_sheets = excel_file.sheet_names
 
-            # Kiểm tra các sheet cần thiết
-            required_sheets = ['CDKT', 'BCTN', 'LCTT']
-            available_sheets = excel_file.sheet_names
+                missing_sheets = [sheet for sheet in required_sheets if sheet not in available_sheets]
+                if missing_sheets:
+                    raise ValueError(f"Thiếu các sheet: {', '.join(missing_sheets)}. File phải có 3 sheets: CDKT, BCTN, LCTT")
 
-            missing_sheets = [sheet for sheet in required_sheets if sheet not in available_sheets]
-            if missing_sheets:
-                raise ValueError(f"Thiếu các sheet: {', '.join(missing_sheets)}. File phải có 3 sheets: CDKT, BCTN, LCTT")
-
-            # Đọc dữ liệu từng sheet
-            self.cdkt_df = pd.read_excel(file_path, sheet_name='CDKT')
-            self.bctn_df = pd.read_excel(file_path, sheet_name='BCTN')
-            self.lctt_df = pd.read_excel(file_path, sheet_name='LCTT')
+                # Đọc dữ liệu từng sheet
+                self.cdkt_df = excel_file.parse('CDKT')
+                self.bctn_df = excel_file.parse('BCTN')
+                self.lctt_df = excel_file.parse('LCTT')
 
             return True
 
