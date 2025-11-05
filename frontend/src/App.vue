@@ -94,20 +94,54 @@
 
         <!-- Results Section -->
         <div v-if="predictionResult">
-          <!-- 14 Chỉ số tài chính -->
+          <!-- 14 Chỉ số tài chính - 2 bảng nằm ngang -->
           <div style="margin: 3rem 0;">
             <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
               📈 14 Chỉ số Tài chính đã tính toán
             </h3>
-            <div class="indicators-grid">
-              <div
-                v-for="indicator in indicators"
-                :key="indicator.code"
-                class="indicator-card"
-              >
-                <div class="indicator-code">{{ indicator.code }}</div>
-                <div class="indicator-name">{{ indicator.name }}</div>
-                <div class="indicator-value">{{ indicator.value.toFixed(4) }}</div>
+            <div class="indicators-tables-container">
+              <!-- Bảng 1: X1-X7 -->
+              <div class="indicators-table-wrapper">
+                <h4 class="table-subtitle">Nhóm 1: Sinh lời & Thanh toán (X1-X7)</h4>
+                <table class="indicators-table">
+                  <thead>
+                    <tr>
+                      <th>Chỉ số</th>
+                      <th>Giá trị</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="indicator in indicators.slice(0, 7)" :key="indicator.code">
+                      <td>
+                        <div class="indicator-code-cell">{{ indicator.code }}</div>
+                        <div class="indicator-name-cell">{{ indicator.name }}</div>
+                      </td>
+                      <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Bảng 2: X8-X14 -->
+              <div class="indicators-table-wrapper">
+                <h4 class="table-subtitle">Nhóm 2: Hiệu quả hoạt động (X8-X14)</h4>
+                <table class="indicators-table">
+                  <thead>
+                    <tr>
+                      <th>Chỉ số</th>
+                      <th>Giá trị</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="indicator in indicators.slice(7, 14)" :key="indicator.code">
+                      <td>
+                        <div class="indicator-code-cell">{{ indicator.code }}</div>
+                        <div class="indicator-name-cell">{{ indicator.name }}</div>
+                      </td>
+                      <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -117,52 +151,67 @@
             <IndicatorsChart v-if="indicatorsDict" :indicators="indicatorsDict" />
           </div>
 
-          <!-- PD Results -->
+          <!-- PD Results - 3 mô hình con trước, Stacking nổi bật ở dưới -->
           <div style="margin: 3rem 0;">
             <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
               🎯 Kết quả Dự báo Xác suất Vỡ nợ (PD)
             </h3>
 
-            <div class="pd-grid">
-              <div
-                class="pd-card"
-                :class="getRiskClass(predictionResult.pd_stacking)"
-              >
-                <div class="pd-label">🎯 PD - Stacking (Kết quả chính)</div>
-                <div class="pd-value">{{ (predictionResult.pd_stacking * 100).toFixed(2) }}%</div>
-                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_stacking) }}</div>
-              </div>
+            <!-- 3 mô hình con -->
+            <div style="margin-bottom: 1rem;">
+              <h4 style="color: #7A7A7A; font-size: 1.1rem; margin-bottom: 1rem; text-align: center;">
+                📊 Kết quả từ 3 Mô hình Cơ sở
+              </h4>
+              <div class="pd-grid-base-models">
+                <div
+                  class="pd-card pd-card-base"
+                  :class="getRiskClass(predictionResult.pd_logistic)"
+                >
+                  <div class="pd-label">📈 Logistic Regression</div>
+                  <div class="pd-value">{{ (predictionResult.pd_logistic * 100).toFixed(2) }}%</div>
+                  <div class="pd-status">{{ getRiskLabel(predictionResult.pd_logistic) }}</div>
+                </div>
 
-              <div
-                class="pd-card"
-                :class="getRiskClass(predictionResult.pd_logistic)"
-              >
-                <div class="pd-label">📈 PD - Logistic Regression</div>
-                <div class="pd-value">{{ (predictionResult.pd_logistic * 100).toFixed(2) }}%</div>
-                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_logistic) }}</div>
-              </div>
+                <div
+                  class="pd-card pd-card-base"
+                  :class="getRiskClass(predictionResult.pd_random_forest)"
+                >
+                  <div class="pd-label">🌳 Random Forest</div>
+                  <div class="pd-value">{{ (predictionResult.pd_random_forest * 100).toFixed(2) }}%</div>
+                  <div class="pd-status">{{ getRiskLabel(predictionResult.pd_random_forest) }}</div>
+                </div>
 
-              <div
-                class="pd-card"
-                :class="getRiskClass(predictionResult.pd_random_forest)"
-              >
-                <div class="pd-label">🌳 PD - Random Forest</div>
-                <div class="pd-value">{{ (predictionResult.pd_random_forest * 100).toFixed(2) }}%</div>
-                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_random_forest) }}</div>
+                <div
+                  class="pd-card pd-card-base"
+                  :class="getRiskClass(predictionResult.pd_xgboost)"
+                >
+                  <div class="pd-label">⚡ XGBoost</div>
+                  <div class="pd-value">{{ (predictionResult.pd_xgboost * 100).toFixed(2) }}%</div>
+                  <div class="pd-status">{{ getRiskLabel(predictionResult.pd_xgboost) }}</div>
+                </div>
               </div>
+            </div>
 
-              <div
-                class="pd-card"
-                :class="getRiskClass(predictionResult.pd_xgboost)"
-              >
-                <div class="pd-label">⚡ PD - XGBoost</div>
-                <div class="pd-value">{{ (predictionResult.pd_xgboost * 100).toFixed(2) }}%</div>
-                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_xgboost) }}</div>
+            <!-- Stacking - Kết quả chính nổi bật -->
+            <div style="margin-top: 2.5rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.3rem; margin-bottom: 1rem; text-align: center; font-weight: 700;">
+                ⭐ KẾT QUẢ CUỐI CÙNG - Mô hình Stacking Ensemble ⭐
+              </h4>
+              <div class="pd-stacking-container">
+                <div
+                  class="pd-card pd-card-stacking"
+                  :class="getRiskClass(predictionResult.pd_stacking)"
+                >
+                  <div class="pd-label-stacking">🎯 PD - Stacking (Tổng hợp 3 mô hình)</div>
+                  <div class="pd-value-stacking">{{ (predictionResult.pd_stacking * 100).toFixed(2) }}%</div>
+                  <div class="pd-status-stacking">{{ getRiskLabel(predictionResult.pd_stacking) }}</div>
+                  <div class="pd-note">💡 Đây là kết quả dự báo chính được tổng hợp từ 3 mô hình trên</div>
+                </div>
               </div>
             </div>
 
             <!-- Chart so sánh PD -->
-            <div class="chart-container">
+            <div class="chart-container" style="margin-top: 2rem;">
               <RiskChart :prediction="predictionResult" />
             </div>
           </div>
