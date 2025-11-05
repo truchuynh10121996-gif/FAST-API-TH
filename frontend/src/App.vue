@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <!-- Header -->
+    <!-- Header mới với tông màu hồng lung linh -->
     <header class="header">
       <div class="logo-container">
         <img
@@ -9,39 +9,25 @@
           class="logo"
         />
       </div>
-      <h1 class="app-title">🏦 Hệ thống Đánh giá Rủi ro Tín dụng Doanh nghiệp</h1>
+      <h1 class="app-title">✨ Hệ thống AI Đánh giá Rủi ro Tín dụng Doanh nghiệp ✨</h1>
     </header>
 
-    <!-- Main Container -->
-    <div class="container">
-      <!-- API Key Section -->
-      <div class="card" v-if="!geminiKeySet">
-        <h2 class="card-title">🔑 Cấu hình Gemini API Key</h2>
-        <div class="input-group">
-          <label class="input-label">Nhập Gemini API Key của bạn:</label>
-          <input
-            v-model="geminiApiKey"
-            type="password"
-            class="input-field"
-            placeholder="AIzaSy..."
-          />
-        </div>
-        <button @click="setGeminiKey" class="btn btn-primary" :disabled="!geminiApiKey">
-          Lưu API Key
-        </button>
-        <p class="upload-hint" style="margin-top: 1rem;">
-          Lấy API key tại: <a href="https://makersuite.google.com/app/apikey" target="_blank">https://makersuite.google.com/app/apikey</a>
-        </p>
-      </div>
+    <!-- Sidebar Toggle Button -->
+    <button @click="toggleSidebar" class="sidebar-toggle" title="Huấn luyện mô hình">
+      {{ sidebarOpen ? '✖️' : '📚' }}
+    </button>
 
-      <!-- Training Section -->
-      <div class="card">
-        <h2 class="card-title">📚 Bước 1: Huấn luyện Mô hình</h2>
+    <!-- Sidebar cho huấn luyện mô hình -->
+    <div class="sidebar" :class="{ open: sidebarOpen }">
+      <div class="sidebar-content">
+        <h2 class="sidebar-title">📚 Huấn luyện Mô hình</h2>
+
         <div class="upload-area" @click="$refs.trainFileInput.click()">
           <div class="upload-icon">📤</div>
-          <p class="upload-text">{{ trainFileName || 'Tải lên file CSV để huấn luyện mô hình' }}</p>
-          <p class="upload-hint">File CSV cần có 14 cột (X_1 đến X_14) và cột 'default' (0 hoặc 1)</p>
+          <p class="upload-text">{{ trainFileName || 'Tải file CSV' }}</p>
+          <p class="upload-hint">File CSV cần có 14 cột (X_1 đến X_14) và cột 'default'</p>
         </div>
+
         <input
           ref="trainFileInput"
           type="file"
@@ -49,131 +35,167 @@
           @change="handleTrainFile"
           style="display: none"
         />
+
         <button
           @click="trainModel"
           class="btn btn-primary"
           :disabled="!trainFile || isTraining"
           style="margin-top: 1rem; width: 100%;"
         >
-          {{ isTraining ? 'Đang huấn luyện...' : '🚀 Huấn luyện Mô hình' }}
+          {{ isTraining ? '⏳ Đang huấn luyện...' : '🚀 Huấn luyện Mô hình' }}
         </button>
 
         <!-- Training Results -->
         <div v-if="trainResult" style="margin-top: 2rem;">
-          <h3 style="color: var(--agribank-green); margin-bottom: 1rem;">✅ Kết quả Huấn luyện</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-            <div class="pd-card risk-low">
-              <div class="pd-label">Số mẫu Train</div>
-              <div class="pd-value" style="font-size: 1.5rem;">{{ trainResult.train_samples }}</div>
-            </div>
-            <div class="pd-card risk-low">
-              <div class="pd-label">Số mẫu Test</div>
-              <div class="pd-value" style="font-size: 1.5rem;">{{ trainResult.test_samples }}</div>
-            </div>
-            <div class="pd-card risk-low">
-              <div class="pd-label">Accuracy (Test)</div>
-              <div class="pd-value" style="font-size: 1.5rem;">{{ (trainResult.metrics_test.accuracy * 100).toFixed(2) }}%</div>
-            </div>
-            <div class="pd-card risk-low">
-              <div class="pd-label">AUC (Test)</div>
-              <div class="pd-value" style="font-size: 1.5rem;">{{ (trainResult.metrics_test.auc * 100).toFixed(2) }}%</div>
-            </div>
+          <h3 style="margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);">
+            ✅ Kết quả Huấn luyện
+          </h3>
+          <div style="background: rgba(255, 255, 255, 0.9); padding: 1rem; border-radius: 12px;">
+            <p><strong>Số mẫu Train:</strong> {{ trainResult.train_samples }}</p>
+            <p><strong>Số mẫu Test:</strong> {{ trainResult.test_samples }}</p>
+            <p><strong>Accuracy (Test):</strong> {{ (trainResult.metrics_test.accuracy * 100).toFixed(2) }}%</p>
+            <p><strong>AUC (Test):</strong> {{ (trainResult.metrics_test.auc * 100).toFixed(2) }}%</p>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Prediction Section -->
+    <!-- Main Container -->
+    <div class="container">
+      <!-- Dự báo Rủi ro Section -->
       <div class="card">
-        <h2 class="card-title">🔮 Bước 2: Dự báo Rủi ro Tín dụng</h2>
+        <h2 class="card-title">🔮 Dự báo Rủi ro Tín dụng từ Hồ sơ Doanh nghiệp</h2>
 
-        <!-- Manual Input Form -->
+        <!-- Upload XLSX File -->
         <div style="margin-bottom: 2rem;">
-          <h3 style="margin-bottom: 1rem; color: var(--agribank-green);">Nhập 14 Chỉ số Tài chính (X1 - X14)</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-            <div v-for="i in 14" :key="i" class="input-group">
-              <label class="input-label">X{{ i }}</label>
-              <input
-                v-model.number="inputData[`X_${i}`]"
-                type="number"
-                step="0.000001"
-                class="input-field"
-                placeholder="0.0"
-              />
-            </div>
+          <div class="upload-area" @click="$refs.xlsxFileInput.click()">
+            <div class="upload-icon">📊</div>
+            <p class="upload-text">{{ xlsxFileName || 'Tải lên file XLSX của doanh nghiệp' }}</p>
+            <p class="upload-hint">
+              File XLSX phải có 3 sheets: CDKT (Cân đối kế toán), BCTN (Báo cáo thu nhập), LCTT (Lưu chuyển tiền tệ)
+            </p>
           </div>
+          <input
+            ref="xlsxFileInput"
+            type="file"
+            accept=".xlsx,.xls"
+            @change="handleXlsxFile"
+            style="display: none"
+          />
           <button
-            @click="predict"
+            @click="predictFromXlsx"
             class="btn btn-primary"
-            :disabled="!isInputValid || isPredicting"
+            :disabled="!xlsxFile || isPredicting"
             style="margin-top: 1rem; width: 100%;"
           >
-            {{ isPredicting ? 'Đang dự báo...' : '🎯 Dự báo PD' }}
+            {{ isPredicting ? '⏳ Đang tính toán...' : '🎯 Tính toán 14 chỉ số và Dự báo PD' }}
           </button>
         </div>
 
-        <!-- Prediction Results -->
+        <!-- Results Section -->
         <div v-if="predictionResult">
-          <h3 style="margin-bottom: 1.5rem; color: var(--agribank-green);">📊 Kết quả Dự báo</h3>
-
-          <!-- PD Cards -->
-          <div class="pd-grid">
-            <div
-              class="pd-card"
-              :class="getRiskClass(predictionResult.pd_stacking)"
-            >
-              <div class="pd-label">🎯 PD - Stacking (Kết quả chính)</div>
-              <div class="pd-value">{{ (predictionResult.pd_stacking * 100).toFixed(2) }}%</div>
-              <div class="pd-status">{{ getRiskLabel(predictionResult.pd_stacking) }}</div>
-            </div>
-
-            <div
-              class="pd-card"
-              :class="getRiskClass(predictionResult.pd_logistic)"
-            >
-              <div class="pd-label">📈 PD - Logistic Regression</div>
-              <div class="pd-value">{{ (predictionResult.pd_logistic * 100).toFixed(2) }}%</div>
-              <div class="pd-status">{{ getRiskLabel(predictionResult.pd_logistic) }}</div>
-            </div>
-
-            <div
-              class="pd-card"
-              :class="getRiskClass(predictionResult.pd_random_forest)"
-            >
-              <div class="pd-label">🌳 PD - Random Forest</div>
-              <div class="pd-value">{{ (predictionResult.pd_random_forest * 100).toFixed(2) }}%</div>
-              <div class="pd-status">{{ getRiskLabel(predictionResult.pd_random_forest) }}</div>
-            </div>
-
-            <div
-              class="pd-card"
-              :class="getRiskClass(predictionResult.pd_xgboost)"
-            >
-              <div class="pd-label">⚡ PD - XGBoost</div>
-              <div class="pd-value">{{ (predictionResult.pd_xgboost * 100).toFixed(2) }}%</div>
-              <div class="pd-status">{{ getRiskLabel(predictionResult.pd_xgboost) }}</div>
+          <!-- 14 Chỉ số tài chính -->
+          <div style="margin: 3rem 0;">
+            <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
+              📈 14 Chỉ số Tài chính đã tính toán
+            </h3>
+            <div class="indicators-grid">
+              <div
+                v-for="indicator in indicators"
+                :key="indicator.code"
+                class="indicator-card"
+              >
+                <div class="indicator-code">{{ indicator.code }}</div>
+                <div class="indicator-name">{{ indicator.name }}</div>
+                <div class="indicator-value">{{ indicator.value.toFixed(4) }}</div>
+              </div>
             </div>
           </div>
 
-          <!-- Chart -->
-          <div class="chart-container">
-            <RiskChart :prediction="predictionResult" />
+          <!-- Dashboard Biểu đồ 14 chỉ số -->
+          <div style="margin: 3rem 0;">
+            <IndicatorsChart v-if="indicatorsDict" :indicators="indicatorsDict" />
           </div>
 
-          <!-- Gemini Analysis -->
-          <div v-if="geminiKeySet">
+          <!-- PD Results -->
+          <div style="margin: 3rem 0;">
+            <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
+              🎯 Kết quả Dự báo Xác suất Vỡ nợ (PD)
+            </h3>
+
+            <div class="pd-grid">
+              <div
+                class="pd-card"
+                :class="getRiskClass(predictionResult.pd_stacking)"
+              >
+                <div class="pd-label">🎯 PD - Stacking (Kết quả chính)</div>
+                <div class="pd-value">{{ (predictionResult.pd_stacking * 100).toFixed(2) }}%</div>
+                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_stacking) }}</div>
+              </div>
+
+              <div
+                class="pd-card"
+                :class="getRiskClass(predictionResult.pd_logistic)"
+              >
+                <div class="pd-label">📈 PD - Logistic Regression</div>
+                <div class="pd-value">{{ (predictionResult.pd_logistic * 100).toFixed(2) }}%</div>
+                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_logistic) }}</div>
+              </div>
+
+              <div
+                class="pd-card"
+                :class="getRiskClass(predictionResult.pd_random_forest)"
+              >
+                <div class="pd-label">🌳 PD - Random Forest</div>
+                <div class="pd-value">{{ (predictionResult.pd_random_forest * 100).toFixed(2) }}%</div>
+                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_random_forest) }}</div>
+              </div>
+
+              <div
+                class="pd-card"
+                :class="getRiskClass(predictionResult.pd_xgboost)"
+              >
+                <div class="pd-label">⚡ PD - XGBoost</div>
+                <div class="pd-value">{{ (predictionResult.pd_xgboost * 100).toFixed(2) }}%</div>
+                <div class="pd-status">{{ getRiskLabel(predictionResult.pd_xgboost) }}</div>
+              </div>
+            </div>
+
+            <!-- Chart so sánh PD -->
+            <div class="chart-container">
+              <RiskChart :prediction="predictionResult" />
+            </div>
+          </div>
+
+          <!-- Gemini Analysis Section -->
+          <div style="margin: 3rem 0;">
             <button
               @click="analyzeWithGemini"
               class="btn btn-primary"
               :disabled="isAnalyzing"
-              style="width: 100%; margin-top: 1rem;"
+              style="width: 100%;"
             >
-              {{ isAnalyzing ? 'Đang phân tích...' : '🤖 Phân tích bằng Gemini AI' }}
+              {{ isAnalyzing ? '⏳ Đang phân tích...' : '🤖 Phân tích chuyên sâu bằng Gemini AI' }}
             </button>
 
             <div v-if="geminiAnalysis" class="analysis-box">
-              <h3 style="margin-bottom: 1rem; color: var(--agribank-green);">🧠 Phân tích từ Gemini AI</h3>
-              {{ geminiAnalysis }}
+              <h3 style="margin-bottom: 1rem; color: #FF6B9D; font-size: 1.4rem;">
+                🧠 Phân tích & Khuyến nghị từ Gemini AI
+              </h3>
+              <div style="white-space: pre-wrap; line-height: 1.8;">{{ geminiAnalysis }}</div>
             </div>
+          </div>
+
+          <!-- Export Report Button -->
+          <div v-if="geminiAnalysis" style="margin: 2rem 0; text-align: center;">
+            <button
+              @click="exportReport"
+              class="btn btn-secondary"
+              :disabled="isExporting"
+              style="padding: 1rem 3rem; font-size: 1.1rem;"
+            >
+              {{ isExporting ? '⏳ Đang xuất báo cáo...' : '📄 Xuất Báo cáo Word' }}
+            </button>
           </div>
         </div>
       </div>
@@ -182,54 +204,48 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 import RiskChart from './components/RiskChart.vue'
+import IndicatorsChart from './components/IndicatorsChart.vue'
 
 export default {
   name: 'App',
   components: {
-    RiskChart
+    RiskChart,
+    IndicatorsChart
   },
   setup() {
     // State
-    const geminiApiKey = ref('')
-    const geminiKeySet = ref(false)
+    const sidebarOpen = ref(false)
+
+    // Training
     const trainFile = ref(null)
     const trainFileName = ref('')
     const isTraining = ref(false)
     const trainResult = ref(null)
 
-    const inputData = ref({
-      X_1: null, X_2: null, X_3: null, X_4: null, X_5: null,
-      X_6: null, X_7: null, X_8: null, X_9: null, X_10: null,
-      X_11: null, X_12: null, X_13: null, X_14: null
-    })
-
+    // Prediction
+    const xlsxFile = ref(null)
+    const xlsxFileName = ref('')
     const isPredicting = ref(false)
+    const indicators = ref([])
+    const indicatorsDict = ref(null)
     const predictionResult = ref(null)
+
+    // Gemini Analysis
     const isAnalyzing = ref(false)
     const geminiAnalysis = ref('')
+
+    // Export
+    const isExporting = ref(false)
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
 
-    // Computed
-    const isInputValid = computed(() => {
-      return Object.values(inputData.value).every(v => v !== null && v !== '')
-    })
-
     // Methods
-    const setGeminiKey = async () => {
-      try {
-        await axios.post(`${API_BASE}/set-gemini-key`, {
-          api_key: geminiApiKey.value
-        })
-        geminiKeySet.value = true
-        alert('✅ Gemini API Key đã được lưu thành công!')
-      } catch (error) {
-        alert('❌ Lỗi khi lưu API Key: ' + error.message)
-      }
+    const toggleSidebar = () => {
+      sidebarOpen.value = !sidebarOpen.value
     }
 
     const handleTrainFile = (event) => {
@@ -265,36 +281,113 @@ export default {
       }
     }
 
-    const predict = async () => {
-      if (!isInputValid.value) return
+    const handleXlsxFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        xlsxFile.value = file
+        xlsxFileName.value = file.name
+      }
+    }
+
+    const predictFromXlsx = async () => {
+      if (!xlsxFile.value) return
 
       isPredicting.value = true
+      indicators.value = []
+      indicatorsDict.value = null
       predictionResult.value = null
       geminiAnalysis.value = ''
 
       try {
-        const response = await axios.post(`${API_BASE}/predict`, inputData.value)
-        predictionResult.value = response.data
+        const formData = new FormData()
+        formData.append('file', xlsxFile.value)
+
+        const response = await axios.post(`${API_BASE}/predict-from-xlsx`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (response.data.status === 'success') {
+          indicators.value = response.data.indicators
+          indicatorsDict.value = response.data.indicators_dict
+          predictionResult.value = response.data.prediction
+
+          alert('✅ Tính toán 14 chỉ số và dự báo PD thành công!')
+
+          // Scroll to results
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
       } catch (error) {
-        alert('❌ Lỗi khi dự báo: ' + (error.response?.data?.detail || error.message))
+        alert('❌ Lỗi khi xử lý file XLSX: ' + (error.response?.data?.detail || error.message))
       } finally {
         isPredicting.value = false
       }
     }
 
     const analyzeWithGemini = async () => {
-      if (!predictionResult.value) return
+      if (!predictionResult.value || !indicatorsDict.value) return
 
       isAnalyzing.value = true
       geminiAnalysis.value = ''
 
       try {
-        const response = await axios.post(`${API_BASE}/analyze`, predictionResult.value)
-        geminiAnalysis.value = response.data.analysis
+        const requestData = {
+          prediction: predictionResult.value,
+          indicators_dict: indicatorsDict.value,
+          indicators: indicators.value
+        }
+
+        const response = await axios.post(`${API_BASE}/analyze`, requestData)
+
+        if (response.data.status === 'success') {
+          geminiAnalysis.value = response.data.analysis
+
+          // Scroll to analysis
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
       } catch (error) {
         alert('❌ Lỗi khi phân tích bằng Gemini: ' + (error.response?.data?.detail || error.message))
       } finally {
         isAnalyzing.value = false
+      }
+    }
+
+    const exportReport = async () => {
+      if (!predictionResult.value || !geminiAnalysis.value) return
+
+      isExporting.value = true
+
+      try {
+        const reportData = {
+          prediction: predictionResult.value,
+          indicators: indicators.value,
+          indicators_dict: indicatorsDict.value,
+          analysis: geminiAnalysis.value
+        }
+
+        const response = await axios.post(`${API_BASE}/export-report`, reportData, {
+          responseType: 'blob'
+        })
+
+        // Tạo URL để download
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `bao_cao_tin_dung_${new Date().getTime()}.docx`)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+
+        alert('✅ Xuất báo cáo thành công!')
+      } catch (error) {
+        alert('❌ Lỗi khi xuất báo cáo: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isExporting.value = false
       }
     }
 
@@ -311,23 +404,27 @@ export default {
     }
 
     return {
-      geminiApiKey,
-      geminiKeySet,
+      sidebarOpen,
       trainFile,
       trainFileName,
       isTraining,
       trainResult,
-      inputData,
-      isInputValid,
+      xlsxFile,
+      xlsxFileName,
       isPredicting,
+      indicators,
+      indicatorsDict,
       predictionResult,
       isAnalyzing,
       geminiAnalysis,
-      setGeminiKey,
+      isExporting,
+      toggleSidebar,
       handleTrainFile,
       trainModel,
-      predict,
+      handleXlsxFile,
+      predictFromXlsx,
       analyzeWithGemini,
+      exportReport,
       getRiskClass,
       getRiskLabel
     }
