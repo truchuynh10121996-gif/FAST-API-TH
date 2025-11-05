@@ -75,12 +75,76 @@ class ExcelProcessor:
                 # Xử lý giá trị
                 if pd.isna(value):
                     return 0.0
-                return float(value)
+
+                # Chuyển đổi giá trị sang float - xử lý nhiều định dạng
+                try:
+                    # Nếu đã là số thì return luôn
+                    if isinstance(value, (int, float)):
+                        return float(value)
+
+                    # Chuyển sang string để xử lý
+                    value_str = str(value).strip()
+
+                    # Loại bỏ các ký tự không phải số (trừ dấu âm và dấu thập phân)
+                    # Xử lý format: "1,000,000.50" hoặc "1.000.000,50" hoặc "(1000)" (số âm)
+
+                    # Kiểm tra nếu có dấu ngoặc đơn (số âm)
+                    is_negative = False
+                    if value_str.startswith('(') and value_str.endswith(')'):
+                        is_negative = True
+                        value_str = value_str[1:-1]
+
+                    # Kiểm tra nếu có dấu trừ
+                    if value_str.startswith('-'):
+                        is_negative = True
+                        value_str = value_str[1:]
+
+                    # Loại bỏ khoảng trắng, ký tự đặc biệt
+                    value_str = value_str.replace(' ', '').replace('\xa0', '')
+
+                    # Xác định dấu thập phân (dấu cuối cùng trong chuỗi)
+                    # Nếu có cả dấu phẩy và dấu chấm, dấu nào xuất hiện sau là dấu thập phân
+                    if ',' in value_str and '.' in value_str:
+                        # Tìm vị trí cuối cùng của mỗi dấu
+                        last_comma = value_str.rfind(',')
+                        last_dot = value_str.rfind('.')
+
+                        if last_comma > last_dot:
+                            # Dấu phẩy là thập phân (định dạng châu Âu: 1.000,50)
+                            value_str = value_str.replace('.', '').replace(',', '.')
+                        else:
+                            # Dấu chấm là thập phân (định dạng Mỹ: 1,000.50)
+                            value_str = value_str.replace(',', '')
+                    elif ',' in value_str:
+                        # Chỉ có dấu phẩy
+                        # Kiểm tra xem có phải phân cách hàng nghìn không
+                        parts = value_str.split(',')
+                        if len(parts) == 2 and len(parts[1]) <= 2:
+                            # Có thể là thập phân (VD: 1000,50)
+                            value_str = value_str.replace(',', '.')
+                        else:
+                            # Là phân cách hàng nghìn (VD: 1,000,000)
+                            value_str = value_str.replace(',', '')
+
+                    # Chuyển sang float
+                    float_value = float(value_str)
+
+                    # Áp dụng dấu âm nếu cần
+                    if is_negative:
+                        float_value = -float_value
+
+                    print(f"✅ Tìm thấy '{indicator_name}': {float_value}")
+                    return float_value
+
+                except (ValueError, AttributeError) as e:
+                    print(f"⚠️ Không thể chuyển đổi giá trị '{value}' cho '{indicator_name}': {str(e)}")
+                    return 0.0
             else:
+                print(f"⚠️ Không tìm thấy chỉ tiêu '{indicator_name}' trong sheet")
                 return 0.0
 
         except Exception as e:
-            print(f"Lỗi khi lấy giá trị {indicator_name}: {str(e)}")
+            print(f"❌ Lỗi khi lấy giá trị {indicator_name}: {str(e)}")
             return 0.0
 
     def calculate_14_indicators(self) -> Dict[str, float]:
