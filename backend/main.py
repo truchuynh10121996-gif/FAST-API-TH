@@ -1,17 +1,21 @@
 """
 FastAPI Backend - Hệ thống Đánh giá Rủi ro Tín dụng
-Endpoints: /train, /predict, /analyze
+Endpoints: /train, /predict, /predict-from-xlsx, /analyze, /export-report
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import pandas as pd
 import os
 import tempfile
+from datetime import datetime
 from model import credit_model
 from gemini_api import get_gemini_analyzer
+from excel_processor import excel_processor
+from report_generator import ReportGenerator
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -160,23 +164,86 @@ async def predict(input_data: PredictionInput):
         raise HTTPException(status_code=500, detail=f"Lỗi khi dự báo: {str(e)}")
 
 
+@app.post("/predict-from-xlsx")
+async def predict_from_xlsx(file: UploadFile = File(...)):
+    """
+    Endpoint dự báo PD từ file XLSX (3 sheets: CDKT, BCTN, LCTT)
+    Tự động tính 14 chỉ số và chạy mô hình dự báo
+
+    Args:
+        file: File XLSX chứa 3 sheets (CDKT, BCTN, LCTT)
+
+    Returns:
+        Dict chứa 14 chỉ số và kết quả dự báo PD
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+        # Kiểm tra mô hình đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình chưa được huấn luyện. Vui lòng upload file CSV để huấn luyện trước."
+                )
+
+        # Lưu file tạm
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        # Đọc file XLSX
+        excel_processor.read_excel(tmp_file_path)
+
+        # Tính 14 chỉ số
+        indicators = excel_processor.calculate_14_indicators()
+        indicators_with_names = excel_processor.get_indicators_with_names()
+
+        # Chuyển thành DataFrame để dự báo
+        X_new = pd.DataFrame([indicators])
+
+        # Dự báo PD
+        prediction_result = credit_model.predict(X_new)
+
+        # Xóa file tạm
+        os.unlink(tmp_file_path)
+
+        # Trả về kết quả
+        return {
+            "status": "success",
+            "indicators": indicators_with_names,
+            "indicators_dict": indicators,
+            "prediction": prediction_result
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý file XLSX: {str(e)}")
+
+
 @app.post("/analyze")
-async def analyze_with_gemini(prediction_data: Dict[str, Any]):
+async def analyze_with_gemini(request_data: Dict[str, Any]):
     """
     Endpoint phân tích kết quả dự báo bằng Gemini API
 
     Args:
-        prediction_data: Dict chứa kết quả dự báo từ /predict
+        request_data: Dict chứa kết quả dự báo và 14 chỉ số
 
     Returns:
-        Dict chứa kết quả phân tích từ Gemini
+        Dict chứa kết quả phân tích từ Gemini và khuyến nghị
     """
     try:
         # Lấy Gemini analyzer
         analyzer = get_gemini_analyzer()
 
         # Phân tích
-        analysis = analyzer.analyze_credit_risk(prediction_data)
+        analysis = analyzer.analyze_credit_risk(request_data)
 
         return {
             "status": "success",
@@ -186,7 +253,7 @@ async def analyze_with_gemini(prediction_data: Dict[str, Any]):
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường hoặc gọi /set-gemini-key trước. Chi tiết: {str(e)}"
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích bằng Gemini: {str(e)}")
@@ -218,6 +285,35 @@ async def set_gemini_key(request: GeminiAPIKeyRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi set Gemini API key: {str(e)}")
+
+
+@app.post("/export-report")
+async def export_report(report_data: Dict[str, Any]):
+    """
+    Endpoint xuất báo cáo Word
+
+    Args:
+        report_data: Dict chứa prediction, indicators, và analysis
+
+    Returns:
+        File Word báo cáo
+    """
+    try:
+        # Tạo báo cáo
+        report_gen = ReportGenerator()
+        output_path = f"bao_cao_tin_dung_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+
+        report_path = report_gen.generate_report(report_data, output_path)
+
+        # Trả về file
+        return FileResponse(
+            path=report_path,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            filename=output_path
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xuất báo cáo: {str(e)}")
 
 
 @app.get("/model-info")
