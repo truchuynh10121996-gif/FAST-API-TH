@@ -197,29 +197,33 @@ async def predict_from_xlsx(file: UploadFile = File(...)):
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
 
-        # Đọc file XLSX
-        excel_processor.read_excel(tmp_file_path)
+        try:
+            # Đọc file XLSX
+            excel_processor.read_excel(tmp_file_path)
 
-        # Tính 14 chỉ số
-        indicators = excel_processor.calculate_14_indicators()
-        indicators_with_names = excel_processor.get_indicators_with_names()
+            # Tính 14 chỉ số
+            indicators = excel_processor.calculate_14_indicators()
+            indicators_with_names = excel_processor.get_indicators_with_names()
 
-        # Chuyển thành DataFrame để dự báo
-        X_new = pd.DataFrame([indicators])
+            # Chuyển thành DataFrame để dự báo
+            X_new = pd.DataFrame([indicators])
 
-        # Dự báo PD
-        prediction_result = credit_model.predict(X_new)
+            # Dự báo PD
+            prediction_result = credit_model.predict(X_new)
 
-        # Xóa file tạm
-        os.unlink(tmp_file_path)
-
-        # Trả về kết quả
-        return {
-            "status": "success",
-            "indicators": indicators_with_names,
-            "indicators_dict": indicators,
-            "prediction": prediction_result
-        }
+            # Trả về kết quả
+            return {
+                "status": "success",
+                "indicators": indicators_with_names,
+                "indicators_dict": indicators,
+                "prediction": prediction_result
+            }
+        finally:
+            # Xóa file tạm trong finally block để đảm bảo file luôn được xóa
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass  # Bỏ qua lỗi khi xóa file
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

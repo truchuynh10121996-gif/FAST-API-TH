@@ -66,16 +66,27 @@ class GeminiAnalyzer:
         # Lấy 14 chỉ số
         indicators_dict = data.get('indicators_dict', {})
 
-        # Phân loại rủi ro
-        if pd_stacking < 5:
-            risk_level = "RỦI RO THẤP 🟢"
-            risk_desc = "doanh nghiệp có tình hình tài chính tốt"
-        elif pd_stacking < 15:
-            risk_level = "RỦI RO TRUNG BÌNH 🟡"
+        # Phân loại rủi ro theo 5 cấp độ
+        if pd_stacking < 2:
+            risk_level = "RỦI RO RẤT THẤP 🟢 (AAA-AA)"
+            risk_desc = "doanh nghiệp xuất sắc, tình hình tài chính rất tốt"
+            rating = "AAA-AA"
+        elif pd_stacking < 5:
+            risk_level = "RỦI RO THẤP 🟢 (A-BBB)"
+            risk_desc = "doanh nghiệp tốt, tình hình tài chính ổn định"
+            rating = "A-BBB"
+        elif pd_stacking < 10:
+            risk_level = "RỦI RO TRUNG BÌNH 🟡 (BB)"
             risk_desc = "doanh nghiệp cần theo dõi thêm"
+            rating = "BB"
+        elif pd_stacking < 20:
+            risk_level = "RỦI RO CAO 🟠 (B)"
+            risk_desc = "doanh nghiệp có rủi ro đáng kể, cần thận trọng"
+            rating = "B"
         else:
-            risk_level = "RỦI RO CAO 🔴"
-            risk_desc = "doanh nghiệp có nguy cơ vỡ nợ cao"
+            risk_level = "RỦI RO RẤT CAO 🔴 (CCC-D)"
+            risk_desc = "doanh nghiệp có nguy cơ vỡ nợ rất cao"
+            rating = "CCC-D"
 
         # Tạo chuỗi hiển thị 14 chỉ số
         indicators_str = f"""
@@ -100,6 +111,13 @@ Bạn là một chuyên gia phân tích rủi ro tín dụng của Agribank vớ
 
 Dựa trên kết quả dự báo xác suất vỡ nợ (PD) từ mô hình AI Stacking Classifier và 14 chỉ số tài chính của doanh nghiệp, hãy phân tích chi tiết và đưa ra khuyến nghị rõ ràng.
 
+**HỆ THỐNG PHÂN LOẠI TÍN DỤNG (5 CẤP ĐỘ):**
+- < 2%: Rất thấp (AAA-AA) - Doanh nghiệp xuất sắc
+- 2-5%: Thấp (A-BBB) - Doanh nghiệp tốt
+- 5-10%: Trung bình (BB) - Cần theo dõi
+- 10-20%: Cao (B) - Rủi ro đáng kể
+- > 20%: Rất cao (CCC-D) - Nguy cơ vỡ nợ cao
+
 **KẾT QUẢ DỰ BÁO:**
 - Xác suất Vỡ nợ (PD) - Stacking Model: {pd_stacking:.2f}%
 - Xác suất Vỡ nợ (PD) - Logistic Regression: {pd_logistic:.2f}%
@@ -107,6 +125,7 @@ Dựa trên kết quả dự báo xác suất vỡ nợ (PD) từ mô hình AI S
 - Xác suất Vỡ nợ (PD) - XGBoost: {pd_xgboost:.2f}%
 - Dự đoán: {prediction_label}
 - Mức độ rủi ro: {risk_level}
+- Credit Rating: {rating}
 
 **14 CHỈ SỐ TÀI CHÍNH:**
 {indicators_str}

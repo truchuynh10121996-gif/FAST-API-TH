@@ -4,7 +4,7 @@
     <header class="header">
       <div class="logo-container">
         <img
-          src="https://upload.wikimedia.org/wikipedia/commons/9/93/Logo_Agribank.svg"
+          src="/logo-agribank1.png"
           alt="Agribank Logo"
           class="logo"
         />
@@ -392,15 +392,21 @@ export default {
     }
 
     const getRiskClass = (pd) => {
-      if (pd < 0.05) return 'risk-low'
-      if (pd < 0.15) return 'risk-medium'
-      return 'risk-high'
+      const pdPercent = pd * 100
+      if (pdPercent < 2) return 'risk-very-low'
+      if (pdPercent < 5) return 'risk-low'
+      if (pdPercent < 10) return 'risk-medium'
+      if (pdPercent < 20) return 'risk-high'
+      return 'risk-very-high'
     }
 
     const getRiskLabel = (pd) => {
-      if (pd < 0.05) return '🟢 Rủi ro Thấp'
-      if (pd < 0.15) return '🟡 Rủi ro Trung bình'
-      return '🔴 Rủi ro Cao'
+      const pdPercent = pd * 100
+      if (pdPercent < 2) return '🟢 Rất thấp (AAA-AA) - Doanh nghiệp xuất sắc'
+      if (pdPercent < 5) return '🟢 Thấp (A-BBB) - Doanh nghiệp tốt'
+      if (pdPercent < 10) return '🟡 Trung bình (BB) - Cần theo dõi'
+      if (pdPercent < 20) return '🟠 Cao (B) - Rủi ro đáng kể'
+      return '🔴 Rất cao (CCC-D) - Nguy cơ vỡ nợ cao'
     }
 
     return {
