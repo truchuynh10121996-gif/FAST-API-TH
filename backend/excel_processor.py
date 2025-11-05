@@ -6,6 +6,7 @@ File XLSX phải có 3 sheets: CDKT (Cân đối kế toán), BCTN (Báo cáo th
 import pandas as pd
 from typing import Dict, Any
 import numpy as np
+import re
 
 
 class ExcelProcessor:
@@ -51,7 +52,7 @@ class ExcelProcessor:
     def get_value_from_sheet(self, df: pd.DataFrame, indicator_name: str) -> float:
         """
         Lấy giá trị từ sheet dựa trên tên chỉ tiêu
-        Giả định: Cột đầu tiên là tên chỉ tiêu, cột thứ 2 là giá trị
+        Giả định: Cột đầu tiên là tên chỉ tiêu, cột CUỐI CÙNG là giá trị năm gần nhất (2024)
 
         Args:
             df: DataFrame chứa dữ liệu
@@ -63,11 +64,25 @@ class ExcelProcessor:
         try:
             # Tìm trong cột đầu tiên (chỉ tiêu)
             col_name = df.columns[0]
-            value_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+            # THAY ĐỔI: Lấy cột CUỐI CÙNG thay vì cột thứ 2 (năm 2024 thay vì 2022)
+            value_col = df.columns[-1] if len(df.columns) > 1 else df.columns[0]
+
+            # Chuẩn hóa indicator_name để tìm kiếm tốt hơn
+            # Loại bỏ số thứ tự ở đầu (VD: "1. Tiền" -> "tiền")
+            search_name = indicator_name.lower().strip()
+            # Loại bỏ các ký tự số và dấu chấm ở đầu
+            search_name = re.sub(r'^\d+\.\s*', '', search_name)
 
             # Tìm dòng có chứa indicator_name (case-insensitive, loại bỏ khoảng trắng)
-            mask = df[col_name].astype(str).str.strip().str.lower().str.contains(
-                indicator_name.lower(), na=False
+            # Áp dụng cùng chuẩn hóa cho từng dòng trong DataFrame
+            def normalize_text(text):
+                text = str(text).strip().lower()
+                # Loại bỏ số thứ tự ở đầu
+                text = re.sub(r'^\d+\.\s*', '', text)
+                return text
+
+            mask = df[col_name].apply(normalize_text).str.contains(
+                search_name, na=False, regex=False
             )
 
             if mask.any():
