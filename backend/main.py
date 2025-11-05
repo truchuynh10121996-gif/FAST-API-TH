@@ -277,10 +277,10 @@ async def set_gemini_key(request: GeminiAPIKeyRequest):
     try:
         os.environ["GEMINI_API_KEY"] = request.api_key
 
-        # Khởi tạo lại Gemini analyzer
-        global gemini_analyzer
+        # Khởi tạo lại Gemini analyzer - cập nhật global instance
         from gemini_api import GeminiAnalyzer
-        gemini_analyzer = GeminiAnalyzer(request.api_key)
+        import gemini_api
+        gemini_api.gemini_analyzer = GeminiAnalyzer(request.api_key)
 
         return {
             "status": "success",
