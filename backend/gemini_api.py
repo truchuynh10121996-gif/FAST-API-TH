@@ -27,15 +27,15 @@ class GeminiAnalyzer:
         genai.configure(api_key=self.api_key)
         # Sử dụng model name đúng theo API v1: gemini-1.5-flash-latest
         try:
-            self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            # ✅ Model chính: Gemini 2.0 Flash
+             self.model = genai.GenerativeModel('models/gemini-2.0-flash')
         except Exception:
-            # Fallback sang gemini-1.5-pro-latest nếu flash không khả dụng
-            try:
-                self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            try
+           # ✅ Dự phòng: Gemini 2.0 Pro
+             self.model = genai.GenerativeModel('models/gemini-2.0-pro')
             except Exception:
-                # Fallback cuối cùng sang gemini-pro
-                self.model = genai.GenerativeModel('gemini-pro')
-
+           # ✅ Dự phòng cuối: Gemini 2.5 Pro Preview (nếu tài khoản có)
+                 self.model = genai.GenerativeModel('models/gemini-2.5-pro-preview-06-05')
     def analyze_credit_risk(self, prediction_data: Dict[str, Any]) -> str:
         """
         Phân tích kết quả dự báo rủi ro tín dụng bằng Gemini
