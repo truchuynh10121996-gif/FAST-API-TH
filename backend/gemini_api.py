@@ -9,10 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Tải biến môi trường từ file .env
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-# Khai báo model Gemini
-MODEL_NAME = "models/gemini-1.5-flash"
-model = genai.GenerativeModel(MODEL_NAME)
 class GeminiAnalyzer:
     """Class để tích hợp Gemini API phân tích kết quả dự báo rủi ro tín dụng"""
 
@@ -29,12 +25,16 @@ class GeminiAnalyzer:
 
         # Cấu hình Gemini
         genai.configure(api_key=self.api_key)
-        # Sử dụng model name đúng: gemini-1.5-flash hoặc gemini-pro
+        # Sử dụng model name đúng theo API v1: gemini-1.5-flash-latest
         try:
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
         except Exception:
-            # Fallback sang gemini-pro nếu gemini-1.5-flash không khả dụng
-            self.model = genai.GenerativeModel('gemini-pro')
+            # Fallback sang gemini-1.5-pro-latest nếu flash không khả dụng
+            try:
+                self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            except Exception:
+                # Fallback cuối cùng sang gemini-pro
+                self.model = genai.GenerativeModel('gemini-pro')
 
     def analyze_credit_risk(self, prediction_data: Dict[str, Any]) -> str:
         """
@@ -50,8 +50,8 @@ class GeminiAnalyzer:
         prompt = self._create_analysis_prompt(prediction_data)
 
         try:
-            # Gọi Gemini API mới
-            response = model.generate_content(prompt)
+            # Gọi Gemini API với self.model
+            response = self.model.generate_content(prompt)
             result = response.text
             return result
 
