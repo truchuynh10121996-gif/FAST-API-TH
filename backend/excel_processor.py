@@ -49,14 +49,15 @@ class ExcelProcessor:
         except Exception as e:
             raise ValueError(f"Lỗi khi đọc file XLSX: {str(e)}")
 
-    def get_value_from_sheet(self, df: pd.DataFrame, indicator_name: str) -> float:
+    def get_value_from_sheet(self, df: pd.DataFrame, indicator_name: str, column_index: int = -1) -> float:
         """
-        Lấy giá trị từ sheet dựa trên tên chỉ tiêu
-        Giả định: Cột đầu tiên là tên chỉ tiêu, cột CUỐI CÙNG là giá trị năm gần nhất (2024)
+        Lấy giá trị từ sheet dựa trên tên chỉ tiêu và cột
+        Giả định: Cột đầu tiên là tên chỉ tiêu, cột CUỐI CÙNG là giá trị năm gần nhất (cuối kỳ)
 
         Args:
             df: DataFrame chứa dữ liệu
             indicator_name: Tên chỉ tiêu cần tìm
+            column_index: Chỉ số cột cần lấy (-1 = cuối cùng, -2 = trước cuối cùng)
 
         Returns:
             Giá trị của chỉ tiêu
@@ -64,8 +65,11 @@ class ExcelProcessor:
         try:
             # Tìm trong cột đầu tiên (chỉ tiêu)
             col_name = df.columns[0]
-            # THAY ĐỔI: Lấy cột CUỐI CÙNG thay vì cột thứ 2 (năm 2024 thay vì 2022)
-            value_col = df.columns[-1] if len(df.columns) > 1 else df.columns[0]
+            # Lấy cột theo chỉ số: -1 = cuối cùng (cuối kỳ), -2 = trước cuối cùng (đầu kỳ)
+            if len(df.columns) > abs(column_index):
+                value_col = df.columns[column_index]
+            else:
+                value_col = df.columns[-1]  # Fallback nếu không đủ cột
 
             # Chuẩn hóa indicator_name để tìm kiếm tốt hơn
             # Loại bỏ số thứ tự ở đầu (VD: "1. Tiền" -> "tiền")
@@ -162,6 +166,30 @@ class ExcelProcessor:
             print(f"❌ Lỗi khi lấy giá trị {indicator_name}: {str(e)}")
             return 0.0
 
+    def get_average_from_two_periods(self, df: pd.DataFrame, indicator_name: str) -> float:
+        """
+        Lấy giá trị bình quân từ 2 kỳ: cuối kỳ (cột cuối) và đầu kỳ (cột trước cuối)
+
+        Args:
+            df: DataFrame chứa dữ liệu
+            indicator_name: Tên chỉ tiêu cần tìm
+
+        Returns:
+            Giá trị bình quân của 2 kỳ
+        """
+        # Lấy giá trị cuối kỳ (cột cuối cùng)
+        cuoi_ky = self.get_value_from_sheet(df, indicator_name, column_index=-1)
+
+        # Lấy giá trị đầu kỳ (cột trước cuối cùng)
+        dau_ky = self.get_value_from_sheet(df, indicator_name, column_index=-2)
+
+        # Tính bình quân
+        binh_quan = (cuoi_ky + dau_ky) / 2
+
+        print(f"📊 {indicator_name}: Đầu kỳ={dau_ky:.2f}, Cuối kỳ={cuoi_ky:.2f}, Bình quân={binh_quan:.2f}")
+
+        return binh_quan
+
     def calculate_14_indicators(self) -> Dict[str, float]:
         """
         Tính toán 14 chỉ số tài chính từ 3 sheets
@@ -182,32 +210,23 @@ class ExcelProcessor:
         gia_von_hang_ban = self.get_value_from_sheet(self.bctn_df, "giá vốn")
 
         # Lấy các chỉ tiêu từ CDKT (Cân đối kế toán)
-        # Lấy giá trị cuối kỳ và đầu kỳ (từ các cột khác nhau trong sheet)
-        tong_tai_san = self.get_value_from_sheet(self.cdkt_df, "tổng tài sản")
-        tai_san_dau_ky = self.get_value_from_sheet(self.cdkt_df, "tổng tài sản đầu")
-        # Nếu không có cột đầu kỳ riêng, dùng giá trị cuối kỳ (tức là không có số liệu so sánh)
-        if tai_san_dau_ky == 0:
-            tai_san_dau_ky = tong_tai_san
-        binh_quan_tong_tai_san = (tong_tai_san + tai_san_dau_ky) / 2
+        # ✅ THAY ĐỔI: Lấy giá trị bình quân tự động từ 2 cột cuối (đầu kỳ và cuối kỳ)
+        tong_tai_san = self.get_value_from_sheet(self.cdkt_df, "tổng tài sản", column_index=-1)
+        binh_quan_tong_tai_san = self.get_average_from_two_periods(self.cdkt_df, "tổng tài sản")
 
-        von_chu_so_huu = self.get_value_from_sheet(self.cdkt_df, "vốn chủ sở hữu")
-        vcsh_dau_ky = self.get_value_from_sheet(self.cdkt_df, "vốn chủ sở hữu đầu")
-        if vcsh_dau_ky == 0:
-            vcsh_dau_ky = von_chu_so_huu
-        binh_quan_von_chu_so_huu = (von_chu_so_huu + vcsh_dau_ky) / 2
+        von_chu_so_huu = self.get_value_from_sheet(self.cdkt_df, "vốn chủ sở hữu", column_index=-1)
+        binh_quan_von_chu_so_huu = self.get_average_from_two_periods(self.cdkt_df, "vốn chủ sở hữu")
 
         no_phai_tra = self.get_value_from_sheet(self.cdkt_df, "nợ phải trả")
         if no_phai_tra == 0:
             no_phai_tra = self.get_value_from_sheet(self.cdkt_df, "tổng nợ")
 
-        tai_san_ngan_han = self.get_value_from_sheet(self.cdkt_df, "tài sản ngắn hạn")
-        no_ngan_han = self.get_value_from_sheet(self.cdkt_df, "nợ ngắn hạn")
-        hang_ton_kho = self.get_value_from_sheet(self.cdkt_df, "hàng tồn kho")
+        tai_san_ngan_han = self.get_value_from_sheet(self.cdkt_df, "tài sản ngắn hạn", column_index=-1)
+        no_ngan_han = self.get_value_from_sheet(self.cdkt_df, "nợ ngắn hạn", column_index=-1)
+        hang_ton_kho = self.get_value_from_sheet(self.cdkt_df, "hàng tồn kho", column_index=-1)
 
-        htk_dau_ky = self.get_value_from_sheet(self.cdkt_df, "hàng tồn kho đầu")
-        if htk_dau_ky == 0:
-            htk_dau_ky = hang_ton_kho
-        binh_quan_hang_ton_kho = (hang_ton_kho + htk_dau_ky) / 2
+        # ✅ THAY ĐỔI: Lấy bình quân hàng tồn kho từ 2 cột cuối
+        binh_quan_hang_ton_kho = self.get_average_from_two_periods(self.cdkt_df, "hàng tồn kho")
 
         lai_vay = self.get_value_from_sheet(self.bctn_df, "lãi vay")
         if lai_vay == 0:
@@ -216,15 +235,13 @@ class ExcelProcessor:
         no_dai_han_den_han = self.get_value_from_sheet(self.cdkt_df, "nợ dài hạn đến hạn")
         khau_hao = self.get_value_from_sheet(self.bctn_df, "khấu hao")
 
-        tien_va_tuong_duong = self.get_value_from_sheet(self.cdkt_df, "tiền")
+        tien_va_tuong_duong = self.get_value_from_sheet(self.cdkt_df, "tiền", column_index=-1)
         if tien_va_tuong_duong == 0:
-            tien_va_tuong_duong = self.get_value_from_sheet(self.cdkt_df, "tiền và tương đương")
+            tien_va_tuong_duong = self.get_value_from_sheet(self.cdkt_df, "tiền và tương đương", column_index=-1)
 
-        khoan_phai_thu = self.get_value_from_sheet(self.cdkt_df, "phải thu")
-        kpt_dau_ky = self.get_value_from_sheet(self.cdkt_df, "phải thu đầu")
-        if kpt_dau_ky == 0:
-            kpt_dau_ky = khoan_phai_thu
-        binh_quan_phai_thu = (khoan_phai_thu + kpt_dau_ky) / 2
+        khoan_phai_thu = self.get_value_from_sheet(self.cdkt_df, "phải thu", column_index=-1)
+        # ✅ THAY ĐỔI: Lấy bình quân phải thu từ 2 cột cuối
+        binh_quan_phai_thu = self.get_average_from_two_periods(self.cdkt_df, "phải thu")
 
         # Tính 14 chỉ số
         indicators = {}

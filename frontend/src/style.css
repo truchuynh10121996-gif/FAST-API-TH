@@ -87,7 +87,7 @@ body {
   min-height: 100vh;
 }
 
-/* Header với hiệu ứng lung linh - màu #ff6b9d chủ đạo - THU NHỎ */
+/* Header với hiệu ứng lung linh - màu #ff6b9d chủ đạo - COMPACT */
 .header {
   background: linear-gradient(135deg,
     #ff6b9d 0%,
@@ -99,15 +99,15 @@ body {
   );
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
-  padding: 1rem 1.5rem;
-  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.35), 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.8rem 1.5rem;
+  box-shadow: 0 3px 12px rgba(255, 107, 157, 0.3), 0 1px 4px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  border-radius: 0 0 16px 16px;
-  margin: 0 1rem 1rem 1rem;
+  gap: 0.8rem;
+  border-radius: 0 0 12px 12px;
+  margin: 0 1rem 0.5rem 1rem;
 }
 
 .header::before {
@@ -135,12 +135,12 @@ body {
 }
 
 .logo {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
   transition: all 0.3s ease;
 }
 
@@ -153,42 +153,44 @@ body {
   flex: 1;
   text-align: center;
   color: #7d1e52;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8),
                0 0 10px rgba(255, 255, 255, 0.5);
   z-index: 1;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
-/* Container - THU NHỎ */
+/* Container - COMPACT */
 .container {
   max-width: 1200px;
-  margin: 1.5rem auto;
+  margin: 0.8rem auto;
   padding: 0 1.5rem;
 }
 
-/* Sidebar - THIẾT KẾ MỚI TINH TẾ VÀ ẤN TƯỢNG */
+/* Sidebar - THIẾT KẾ ĐẸP VÀ CHUYÊN NGHIỆP */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 280px;
+  width: 320px;
   height: 100vh;
   background: linear-gradient(180deg,
-    rgba(255, 107, 157, 0.97) 0%,
-    rgba(255, 133, 173, 0.97) 50%,
-    rgba(255, 159, 189, 0.97) 100%
+    rgba(255, 107, 157, 0.98) 0%,
+    rgba(255, 133, 173, 0.98) 40%,
+    rgba(255, 159, 189, 0.98) 70%,
+    rgba(255, 182, 193, 0.98) 100%
   );
-  backdrop-filter: blur(20px);
-  box-shadow: 4px 0 24px rgba(255, 107, 157, 0.45),
-              inset -1px 0 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 5px 0 30px rgba(255, 107, 157, 0.5),
+              inset -2px 0 10px rgba(255, 255, 255, 0.3);
   transform: translateX(-100%);
   transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   z-index: 1000;
   overflow-y: auto;
-  padding: 1.5rem 1.2rem;
+  padding: 2rem 1.5rem;
   position: relative;
+  border-right: 3px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Hiệu ứng shimmer cho sidebar */
@@ -232,22 +234,22 @@ body {
 .sidebar-toggle {
   position: fixed;
   left: 16px;
-  top: 120px;
+  top: 90px;
   background: linear-gradient(135deg, #ff6b9d 0%, #ff85ad 50%, #ff9fbf 100%);
   color: white;
   border: none;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5),
-              0 0 0 4px rgba(255, 255, 255, 0.3),
-              inset 0 2px 6px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 6px 24px rgba(255, 107, 157, 0.6),
+              0 0 0 3px rgba(255, 255, 255, 0.4),
+              inset 0 2px 8px rgba(255, 255, 255, 0.5);
   z-index: 1001;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   animation: pulse-glow-enhanced 2.5s infinite;
 }
@@ -286,17 +288,20 @@ body {
 }
 
 .sidebar-title {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 800;
-  margin-bottom: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3),
-               0 0 15px rgba(255, 255, 255, 0.4);
+  margin-bottom: 1.8rem;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4),
+               0 0 20px rgba(255, 255, 255, 0.5);
   color: white;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
-  letter-spacing: 0.5px;
+  padding: 1rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.8px;
   text-align: center;
   animation: fade-slide-down 0.5s ease-out;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px 12px 0 0;
 }
 
 @keyframes fade-slide-down {
