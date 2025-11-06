@@ -4,6 +4,12 @@ Endpoints: /train, /predict, /predict-from-xlsx, /analyze, /export-report
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Tải các biến môi trường từ file .env
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel

@@ -5,8 +5,14 @@ Gemini API Module - Tích hợp Google Gemini để phân tích kết quả dự
 import os
 from typing import Dict, Any
 import google.generativeai as genai
+from dotenv import load_dotenv
 
+load_dotenv()  # Tải biến môi trường từ file .env
 
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Khai báo model Gemini
+MODEL_NAME = "models/gemini-1.5-flash"
+model = genai.GenerativeModel(MODEL_NAME)
 class GeminiAnalyzer:
     """Class để tích hợp Gemini API phân tích kết quả dự báo rủi ro tín dụng"""
 
@@ -44,9 +50,11 @@ class GeminiAnalyzer:
         prompt = self._create_analysis_prompt(prediction_data)
 
         try:
-            # Gọi Gemini API
-            response = self.model.generate_content(prompt)
-            return response.text
+            # Gọi Gemini API mới
+            response = model.generate_content(prompt)
+            result = response.text
+            return result
+
         except Exception as e:
             return f"❌ Lỗi khi gọi Gemini API: {str(e)}"
 
