@@ -1,15 +1,29 @@
 <template>
   <div>
-    <h3 style="margin-bottom: 1.5rem; color: var(--agribank-green); text-align: center;">
+    <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.4rem; font-weight: 700;">
       📊 Biểu đồ So sánh PD từ 4 Models
     </h3>
-    <Bar :data="chartData" :options="chartOptions" />
+
+    <!-- Grid 2 cột: Bar chart và Radar chart -->
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 1.5rem;">
+      <!-- Biểu đồ cột -->
+      <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(255, 182, 193, 0.25);">
+        <h4 style="text-align: center; color: #4A4A4A; font-size: 1rem; margin-bottom: 1rem;">📊 Biểu đồ Cột</h4>
+        <Bar :data="chartData" :options="chartOptions" />
+      </div>
+
+      <!-- Biểu đồ Radar -->
+      <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 16px rgba(255, 182, 193, 0.25);">
+        <h4 style="text-align: center; color: #4A4A4A; font-size: 1rem; margin-bottom: 1rem;">🎯 Biểu đồ Radar</h4>
+        <Radar :data="radarData" :options="radarOptions" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { computed } from 'vue'
-import { Bar } from 'vue-chartjs'
+import { Bar, Radar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   Title,
@@ -17,15 +31,31 @@ import {
   Legend,
   BarElement,
   CategoryScale,
-  LinearScale
+  LinearScale,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler
 } from 'chart.js'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler
+)
 
 export default {
   name: 'RiskChart',
   components: {
-    Bar
+    Bar,
+    Radar
   },
   props: {
     prediction: {
@@ -148,9 +178,107 @@ export default {
       return '#e53935' // Đỏ đậm
     }
 
+    // Radar Chart Data
+    const radarData = computed(() => {
+      const pdStacking = (props.prediction.pd_stacking * 100).toFixed(2)
+      const pdLogistic = (props.prediction.pd_logistic * 100).toFixed(2)
+      const pdRF = (props.prediction.pd_random_forest * 100).toFixed(2)
+      const pdXGB = (props.prediction.pd_xgboost * 100).toFixed(2)
+
+      return {
+        labels: ['Stacking', 'Logistic', 'Random Forest', 'XGBoost'],
+        datasets: [
+          {
+            label: 'Xác suất Vỡ nợ (%)',
+            data: [pdStacking, pdLogistic, pdRF, pdXGB],
+            backgroundColor: 'rgba(255, 107, 157, 0.2)',
+            borderColor: '#FF6B9D',
+            borderWidth: 3,
+            pointBackgroundColor: '#FF6B9D',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#FF6B9D',
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }
+        ]
+      }
+    })
+
+    const radarOptions = {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: {
+              size: 13,
+              weight: 'bold'
+            },
+            color: '#2c3e50'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: {
+            size: 13,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 12
+          },
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              const value = context.parsed.r
+              let risk = ''
+              if (value < 5) risk = '🟢 Rủi ro Thấp'
+              else if (value < 15) risk = '🟡 Rủi ro Trung bình'
+              else risk = '🔴 Rủi ro Cao'
+              return `PD: ${value}% - ${risk}`
+            }
+          }
+        }
+      },
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            stepSize: 20,
+            callback: function(value) {
+              return value + '%'
+            },
+            font: {
+              size: 11
+            },
+            color: '#4A4A4A'
+          },
+          grid: {
+            color: 'rgba(255, 182, 193, 0.3)'
+          },
+          angleLines: {
+            color: 'rgba(255, 182, 193, 0.3)'
+          },
+          pointLabels: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            },
+            color: '#2c3e50'
+          }
+        }
+      }
+    }
+
     return {
       chartData,
-      chartOptions
+      chartOptions,
+      radarData,
+      radarOptions
     }
   }
 }

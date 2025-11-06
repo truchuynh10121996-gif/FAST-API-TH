@@ -182,17 +182,18 @@ class ExcelProcessor:
         gia_von_hang_ban = self.get_value_from_sheet(self.bctn_df, "giá vốn")
 
         # Lấy các chỉ tiêu từ CDKT (Cân đối kế toán)
-        # Lấy giá trị đầu kỳ và cuối kỳ nếu có, nếu không thì lấy giá trị hiện tại
+        # Lấy giá trị cuối kỳ và đầu kỳ (từ các cột khác nhau trong sheet)
         tong_tai_san = self.get_value_from_sheet(self.cdkt_df, "tổng tài sản")
         tai_san_dau_ky = self.get_value_from_sheet(self.cdkt_df, "tổng tài sản đầu")
+        # Nếu không có cột đầu kỳ riêng, dùng giá trị cuối kỳ (tức là không có số liệu so sánh)
         if tai_san_dau_ky == 0:
-            tai_san_dau_ky = tong_tai_san * 0.9  # Giả định giảm 10% so với cuối kỳ
+            tai_san_dau_ky = tong_tai_san
         binh_quan_tong_tai_san = (tong_tai_san + tai_san_dau_ky) / 2
 
         von_chu_so_huu = self.get_value_from_sheet(self.cdkt_df, "vốn chủ sở hữu")
         vcsh_dau_ky = self.get_value_from_sheet(self.cdkt_df, "vốn chủ sở hữu đầu")
         if vcsh_dau_ky == 0:
-            vcsh_dau_ky = von_chu_so_huu * 0.9
+            vcsh_dau_ky = von_chu_so_huu
         binh_quan_von_chu_so_huu = (von_chu_so_huu + vcsh_dau_ky) / 2
 
         no_phai_tra = self.get_value_from_sheet(self.cdkt_df, "nợ phải trả")
@@ -205,7 +206,7 @@ class ExcelProcessor:
 
         htk_dau_ky = self.get_value_from_sheet(self.cdkt_df, "hàng tồn kho đầu")
         if htk_dau_ky == 0:
-            htk_dau_ky = hang_ton_kho * 0.9
+            htk_dau_ky = hang_ton_kho
         binh_quan_hang_ton_kho = (hang_ton_kho + htk_dau_ky) / 2
 
         lai_vay = self.get_value_from_sheet(self.bctn_df, "lãi vay")
@@ -222,7 +223,7 @@ class ExcelProcessor:
         khoan_phai_thu = self.get_value_from_sheet(self.cdkt_df, "phải thu")
         kpt_dau_ky = self.get_value_from_sheet(self.cdkt_df, "phải thu đầu")
         if kpt_dau_ky == 0:
-            kpt_dau_ky = khoan_phai_thu * 0.9
+            kpt_dau_ky = khoan_phai_thu
         binh_quan_phai_thu = (khoan_phai_thu + kpt_dau_ky) / 2
 
         # Tính 14 chỉ số
