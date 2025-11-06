@@ -12,59 +12,30 @@
       <h1 class="app-title">✨ Hệ thống AI Đánh giá Rủi ro Tín dụng Doanh nghiệp ✨</h1>
     </header>
 
-    <!-- Sidebar Toggle Button -->
-    <button @click="toggleSidebar" class="sidebar-toggle" title="Huấn luyện mô hình">
-      {{ sidebarOpen ? '✖️' : '📚' }}
-    </button>
-
-    <!-- Sidebar cho huấn luyện mô hình -->
-    <div class="sidebar" :class="{ open: sidebarOpen }">
-      <div class="sidebar-content">
-        <h2 class="sidebar-title">📚 Huấn luyện Mô hình</h2>
-
-        <div class="upload-area" @click="$refs.trainFileInput.click()">
-          <div class="upload-icon">📤</div>
-          <p class="upload-text">{{ trainFileName || 'Tải file CSV' }}</p>
-          <p class="upload-hint">File CSV cần có 14 cột (X_1 đến X_14) và cột 'default'</p>
-        </div>
-
-        <input
-          ref="trainFileInput"
-          type="file"
-          accept=".csv"
-          @change="handleTrainFile"
-          style="display: none"
-        />
-
-        <button
-          @click="trainModel"
-          class="btn btn-primary"
-          :disabled="!trainFile || isTraining"
-          style="margin-top: 1rem; width: 100%;"
-        >
-          {{ isTraining ? '⏳ Đang huấn luyện...' : '🚀 Huấn luyện Mô hình' }}
-        </button>
-
-        <!-- Training Results -->
-        <div v-if="trainResult" style="margin-top: 2rem;">
-          <h3 style="margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);">
-            ✅ Kết quả Huấn luyện
-          </h3>
-          <div style="background: rgba(255, 255, 255, 0.9); padding: 1rem; border-radius: 12px;">
-            <p><strong>Số mẫu Train:</strong> {{ trainResult.train_samples }}</p>
-            <p><strong>Số mẫu Test:</strong> {{ trainResult.test_samples }}</p>
-            <p><strong>Accuracy (Test):</strong> {{ (trainResult.metrics_test.accuracy * 100).toFixed(2) }}%</p>
-            <p><strong>AUC (Test):</strong> {{ (trainResult.metrics_test.auc * 100).toFixed(2) }}%</p>
-          </div>
-        </div>
-      </div>
+    <!-- ✅ TAB SYSTEM - Thay thế Sidebar -->
+    <div class="tabs-container">
+      <button
+        @click="activeTab = 'predict'"
+        class="tab-button"
+        :class="{ active: activeTab === 'predict' }"
+      >
+        🔮 Dự Báo PD
+      </button>
+      <button
+        @click="activeTab = 'train'"
+        class="tab-button"
+        :class="{ active: activeTab === 'train' }"
+      >
+        📚 Huấn luyện mô hình
+      </button>
     </div>
 
     <!-- Main Container -->
     <div class="container">
-      <!-- Dự báo Rủi ro Section -->
-      <div class="card">
-        <h2 class="card-title">🔮 Dự báo Rủi ro Tín dụng từ Hồ sơ Doanh nghiệp</h2>
+      <!-- ✅ TAB CONTENT: Dự Báo PD -->
+      <div v-if="activeTab === 'predict'" class="tab-content">
+        <div class="card">
+          <h2 class="card-title">🔮 Dự báo Rủi ro Tín dụng từ Hồ sơ Doanh nghiệp</h2>
 
         <!-- Upload XLSX File -->
         <div style="margin-bottom: 2rem;">
@@ -247,6 +218,52 @@
             </button>
           </div>
         </div>
+        </div>
+      </div>
+
+      <!-- ✅ TAB CONTENT: Huấn luyện Mô hình -->
+      <div v-if="activeTab === 'train'" class="tab-content">
+        <div class="card">
+          <h2 class="card-title">📚 Huấn luyện Mô hình Machine Learning</h2>
+
+          <div style="margin-bottom: 2rem;">
+            <div class="upload-area" @click="$refs.trainFileInput.click()">
+              <div class="upload-icon">📤</div>
+              <p class="upload-text">{{ trainFileName || 'Tải lên file CSV để huấn luyện' }}</p>
+              <p class="upload-hint">File CSV cần có 14 cột (X_1 đến X_14) và cột 'default'</p>
+            </div>
+
+            <input
+              ref="trainFileInput"
+              type="file"
+              accept=".csv"
+              @change="handleTrainFile"
+              style="display: none"
+            />
+
+            <button
+              @click="trainModel"
+              class="btn btn-primary"
+              :disabled="!trainFile || isTraining"
+              style="margin-top: 1rem; width: 100%;"
+            >
+              {{ isTraining ? '⏳ Đang huấn luyện...' : '🚀 Huấn luyện Mô hình' }}
+            </button>
+          </div>
+
+          <!-- Training Results -->
+          <div v-if="trainResult" style="margin-top: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #FF6B9D; font-size: 1.2rem;">
+              ✅ Kết quả Huấn luyện
+            </h3>
+            <div style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 240, 247, 0.95) 100%); padding: 1.5rem; border-radius: 14px; border: 2px solid rgba(255, 182, 193, 0.3);">
+              <p style="margin-bottom: 0.5rem;"><strong>Số mẫu Train:</strong> {{ trainResult.train_samples }}</p>
+              <p style="margin-bottom: 0.5rem;"><strong>Số mẫu Test:</strong> {{ trainResult.test_samples }}</p>
+              <p style="margin-bottom: 0.5rem;"><strong>Accuracy (Test):</strong> {{ (trainResult.metrics_test.accuracy * 100).toFixed(2) }}%</p>
+              <p style="margin-bottom: 0;"><strong>AUC (Test):</strong> {{ (trainResult.metrics_test.auc * 100).toFixed(2) }}%</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -265,8 +282,8 @@ export default {
     IndicatorsChart
   },
   setup() {
-    // State
-    const sidebarOpen = ref(false)
+    // ✅ TAB STATE - Mặc định là 'predict'
+    const activeTab = ref('predict')
 
     // Training
     const trainFile = ref(null)
@@ -293,10 +310,6 @@ export default {
     const API_BASE = 'http://localhost:8000'
 
     // Methods
-    const toggleSidebar = () => {
-      sidebarOpen.value = !sidebarOpen.value
-    }
-
     const handleTrainFile = (event) => {
       const file = event.target.files[0]
       if (file) {
@@ -459,21 +472,26 @@ export default {
     }
 
     return {
-      sidebarOpen,
+      // ✅ TAB STATE
+      activeTab,
+      // Training
       trainFile,
       trainFileName,
       isTraining,
       trainResult,
+      // Prediction
       xlsxFile,
       xlsxFileName,
       isPredicting,
       indicators,
       indicatorsDict,
       predictionResult,
+      // Gemini Analysis
       isAnalyzing,
       geminiAnalysis,
+      // Export
       isExporting,
-      toggleSidebar,
+      // Methods
       handleTrainFile,
       trainModel,
       handleXlsxFile,

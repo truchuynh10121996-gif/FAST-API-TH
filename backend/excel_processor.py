@@ -206,8 +206,10 @@ class ExcelProcessor:
             doanh_thu_thuan = self.get_value_from_sheet(self.bctn_df, "doanh thu bán")
 
         loi_nhuan_gop = self.get_value_from_sheet(self.bctn_df, "lợi nhuận gộp")
-        loi_nhuan_truoc_thue = self.get_value_from_sheet(self.bctn_df, "lợi nhuận trước thuế")
         gia_von_hang_ban = self.get_value_from_sheet(self.bctn_df, "giá vốn")
+
+        # ✅ THAY ĐỔI: Lấy "Lợi nhuận trước thuế" từ LCTT thay vì BCTN
+        loi_nhuan_truoc_thue = self.get_value_from_sheet(self.lctt_df, "lợi nhuận trước thuế")
 
         # Lấy các chỉ tiêu từ CDKT (Cân đối kế toán)
         # ✅ THAY ĐỔI: Lấy giá trị bình quân tự động từ 2 cột cuối (đầu kỳ và cuối kỳ)
@@ -228,12 +230,22 @@ class ExcelProcessor:
         # ✅ THAY ĐỔI: Lấy bình quân hàng tồn kho từ 2 cột cuối
         binh_quan_hang_ton_kho = self.get_average_from_two_periods(self.cdkt_df, "hàng tồn kho")
 
-        lai_vay = self.get_value_from_sheet(self.bctn_df, "lãi vay")
+        # ✅ THAY ĐỔI: Lấy "chi phí Lãi vay" từ LCTT thay vì BCTN
+        lai_vay = self.get_value_from_sheet(self.lctt_df, "chi phí lãi vay")
         if lai_vay == 0:
-            lai_vay = self.get_value_from_sheet(self.bctn_df, "chi phí lãi")
+            lai_vay = self.get_value_from_sheet(self.lctt_df, "chi phí lãi")
+        if lai_vay == 0:
+            lai_vay = self.get_value_from_sheet(self.lctt_df, "lãi vay")
 
-        no_dai_han_den_han = self.get_value_from_sheet(self.cdkt_df, "nợ dài hạn đến hạn")
-        khau_hao = self.get_value_from_sheet(self.bctn_df, "khấu hao")
+        # ✅ THAY ĐỔI: Lấy "Nợ dài hạn" từ CDKT (thay vì "nợ dài hạn đến hạn")
+        no_dai_han = self.get_value_from_sheet(self.cdkt_df, "nợ dài hạn", column_index=-1)
+
+        # ✅ THAY ĐỔI: Lấy "Khấu hao TSCĐ và BĐSĐT" từ LCTT thay vì BCTN
+        khau_hao = self.get_value_from_sheet(self.lctt_df, "khấu hao tscđ")
+        if khau_hao == 0:
+            khau_hao = self.get_value_from_sheet(self.lctt_df, "khấu hao")
+        if khau_hao == 0:
+            khau_hao = self.get_value_from_sheet(self.lctt_df, "khấu hao tài sản")
 
         tien_va_tuong_duong = self.get_value_from_sheet(self.cdkt_df, "tiền", column_index=-1)
         if tien_va_tuong_duong == 0:
@@ -271,19 +283,24 @@ class ExcelProcessor:
         indicators['X_8'] = (tai_san_ngan_han - hang_ton_kho) / no_ngan_han if no_ngan_han != 0 else 0
 
         # X_9: Hệ số khả năng trả lãi
+        # ✅ CÔNG THỨC: (Lợi nhuận trước thuế (LCTT) + chi phí Lãi vay (LCTT)) / chi phí Lãi vay (LCTT)
         lntt_cong_lai_vay = loi_nhuan_truoc_thue + lai_vay
         indicators['X_9'] = lntt_cong_lai_vay / lai_vay if lai_vay != 0 else 0
 
         # X_10: Hệ số khả năng trả nợ gốc
+        # ✅ CÔNG THỨC: (LNTT (LCTT) + Lãi vay (LCTT) + Khấu hao (LCTT)) / (Lãi vay (LCTT) + Nợ dài hạn (CDKT))
         tu_so_x10 = lntt_cong_lai_vay + khau_hao
-        mau_so_x10 = lai_vay + no_dai_han_den_han
+        mau_so_x10 = lai_vay + no_dai_han
         indicators['X_10'] = tu_so_x10 / mau_so_x10 if mau_so_x10 != 0 else 0
 
         # X_11: Hệ số khả năng tạo tiền trên vốn chủ sở hữu
         indicators['X_11'] = tien_va_tuong_duong / von_chu_so_huu if von_chu_so_huu != 0 else 0
 
         # X_12: Vòng quay hàng tồn kho
-        indicators['X_12'] = gia_von_hang_ban / binh_quan_hang_ton_kho if binh_quan_hang_ton_kho != 0 else 0
+        # ✅ CÔNG THỨC: Giá vốn hàng bán (BCTN) / Bình quân hàng tồn kho (CDKT)
+        # ✅ LẤY GIÁ TRỊ DƯƠNG, KHÔNG LẤY GIÁ TRỊ ÂM
+        x12_value = gia_von_hang_ban / binh_quan_hang_ton_kho if binh_quan_hang_ton_kho != 0 else 0
+        indicators['X_12'] = max(0, x12_value)  # Chỉ lấy giá trị dương
 
         # X_13: Kỳ thu tiền bình quân
         indicators['X_13'] = 365 / (doanh_thu_thuan / binh_quan_phai_thu) if (doanh_thu_thuan != 0 and binh_quan_phai_thu != 0) else 0
