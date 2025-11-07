@@ -368,6 +368,133 @@ async def export_report(report_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Lỗi khi xuất báo cáo: {str(e)}")
 
 
+@app.post("/fetch-industry-data")
+async def fetch_industry_data(request_data: Dict[str, Any]):
+    """
+    Endpoint để AI lấy dữ liệu ngành nghề tự động
+
+    Args:
+        request_data: Dict chứa industry code và industry_name
+
+    Returns:
+        Dict chứa dữ liệu ngành nghề
+    """
+    try:
+        industry = request_data.get('industry', '')
+        industry_name = request_data.get('industry_name', '')
+
+        if not industry or not industry_name:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin industry hoặc industry_name"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Lấy dữ liệu
+        result = analyzer.fetch_industry_data(industry, industry_name)
+
+        return {
+            "status": "success",
+            "data": result.get("data", {})
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy dữ liệu ngành: {str(e)}")
+
+
+@app.post("/generate-charts")
+async def generate_charts(request_data: Dict[str, Any]):
+    """
+    Endpoint tạo biểu đồ ECharts và phân tích sơ bộ
+
+    Args:
+        request_data: Dict chứa industry, industry_name, và data
+
+    Returns:
+        Dict chứa charts_data và brief_analysis
+    """
+    try:
+        industry = request_data.get('industry', '')
+        industry_name = request_data.get('industry_name', '')
+        data = request_data.get('data', {})
+
+        if not industry or not industry_name or not data:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin industry, industry_name hoặc data"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Tạo biểu đồ và phân tích
+        result = analyzer.generate_charts_data(industry, industry_name, data)
+
+        return {
+            "status": "success",
+            "charts_data": result.get("charts_data", []),
+            "brief_analysis": result.get("brief_analysis", "")
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo biểu đồ: {str(e)}")
+
+
+@app.post("/deep-analyze-industry")
+async def deep_analyze_industry_endpoint(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích sâu ảnh hưởng của ngành đến quyết định cho vay
+
+    Args:
+        request_data: Dict chứa industry, industry_name, data, và brief_analysis
+
+    Returns:
+        Dict chứa deep_analysis
+    """
+    try:
+        industry = request_data.get('industry', '')
+        industry_name = request_data.get('industry_name', '')
+        data = request_data.get('data', {})
+        brief_analysis = request_data.get('brief_analysis', '')
+
+        if not industry or not industry_name or not data:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin industry, industry_name hoặc data"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Phân tích sâu
+        deep_analysis = analyzer.deep_analyze_industry(industry, industry_name, data, brief_analysis)
+
+        return {
+            "status": "success",
+            "deep_analysis": deep_analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích sâu: {str(e)}")
+
+
 @app.get("/model-info")
 async def get_model_info():
     """

@@ -3,23 +3,25 @@
     <!-- Khoảng trống 1cm trước header -->
     <div class="header-spacer"></div>
 
-    <!-- Header mới với tông màu hồng lung linh - GIẢM KÍCH THƯỚC -->
-    <header class="header">
-      <div class="logo-container">
+    <!-- Header mới với tông màu hồng lung linh - Chỉ thanh hồng -->
+    <header class="header"></header>
+
+    <!-- Logo và Tiêu đề nằm dưới header, canh giữa -->
+    <div class="logo-title-section">
+      <div class="logo-container-center">
         <img
           src="/logo-agribank1.png"
           alt="Agribank Logo"
-          class="logo"
+          class="logo-center"
         />
       </div>
-      <!-- Tiêu đề nằm ngang với logo -->
-      <div class="title-section-inline">
-        <h1 class="main-title">CHƯƠNG TRÌNH ĐÁNH GIÁ RỦI RO TÍN DỤNG</h1>
-        <h2 class="sub-title">Dự báo xác suất Vỡ nợ KHDN (PD) & Phân tích AI chuyên sâu</h2>
+      <div class="title-section-center">
+        <h1 class="main-title-center">CHƯƠNG TRÌNH ĐÁNH GIÁ RỦI RO TÍN DỤNG</h1>
+        <h2 class="sub-title-center">Dự báo xác suất Vỡ nợ KHDN (PD) & Phân tích AI chuyên sâu</h2>
       </div>
-    </header>
+    </div>
 
-    <!-- Divider sau header -->
+    <!-- Divider sau logo và tiêu đề -->
     <div class="title-divider"></div>
 
     <!-- ✅ TAB SYSTEM - Thay thế Sidebar -->
@@ -249,8 +251,37 @@
         <div class="card">
           <h2 class="card-title">📊 Dashboard Tài Chính - Phân tích Ngành nghề</h2>
 
-          <!-- Dropdown chọn ngành -->
-          <div style="margin-bottom: 2rem;">
+          <!-- Bảng mô tả và hướng dẫn sử dụng -->
+          <div class="dashboard-guide">
+            <h3 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 0.8rem;">
+              📋 Giới thiệu Dashboard
+            </h3>
+            <p style="margin-bottom: 0.5rem; line-height: 1.6;">
+              Dashboard Tài Chính giúp bạn phân tích xu hướng và dữ liệu kinh tế theo từng ngành nghề tại Việt Nam.
+              Hệ thống sử dụng AI (Gemini) để thu thập, phân tích dữ liệu mới nhất và đưa ra khuyến nghị cho quyết định tín dụng.
+            </p>
+            <div class="guide-steps">
+              <div class="guide-step">
+                <span class="step-number">1</span>
+                <span class="step-text">Chọn ngành nghề muốn phân tích</span>
+              </div>
+              <div class="guide-step">
+                <span class="step-number">2</span>
+                <span class="step-text">Nhấn "🔄 AI Lấy dữ liệu" để thu thập thông tin mới nhất</span>
+              </div>
+              <div class="guide-step">
+                <span class="step-number">3</span>
+                <span class="step-text">Nhấn "📊 Xem biểu đồ" để hiển thị dữ liệu trực quan + phân tích sơ bộ</span>
+              </div>
+              <div class="guide-step">
+                <span class="step-number">4</span>
+                <span class="step-text">Nhấn "🔍 Phân tích sâu" để AI đánh giá ảnh hưởng đến quyết định cho vay</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dropdown chọn ngành - TÁCH RIÊNG TỪNG NGÀNH -->
+          <div style="margin: 2rem 0;">
             <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
               🏢 Chọn ngành nghề để phân tích:
             </label>
@@ -261,53 +292,97 @@
             >
               <option value="">-- Chọn ngành nghề --</option>
               <option value="overview">📈 Tổng quan Kinh tế Việt Nam</option>
-              <option value="agriculture">🌾 Nông nghiệp & Lâm nghiệp</option>
-              <option value="manufacturing">🏭 Sản xuất & Chế biến</option>
-              <option value="construction">🏗️ Xây dựng & Bất động sản</option>
-              <option value="retail">🛒 Bán lẻ & Thương mại</option>
-              <option value="finance">🏦 Tài chính & Ngân hàng</option>
+              <option value="agriculture">🌾 Nông nghiệp</option>
+              <option value="forestry">🌲 Lâm nghiệp</option>
+              <option value="fishing">🐟 Thủy sản</option>
+              <option value="manufacturing">🏭 Sản xuất công nghiệp</option>
+              <option value="processing">⚙️ Chế biến</option>
+              <option value="construction">🏗️ Xây dựng</option>
+              <option value="realestate">🏘️ Bất động sản</option>
+              <option value="retail">🛒 Bán lẻ</option>
+              <option value="wholesale">📦 Bán sỉ</option>
+              <option value="trading">💼 Thương mại</option>
+              <option value="finance">🏦 Tài chính</option>
+              <option value="banking">🏧 Ngân hàng</option>
+              <option value="insurance">🛡️ Bảo hiểm</option>
               <option value="technology">💻 Công nghệ Thông tin</option>
-              <option value="transportation">🚚 Vận tải & Logistics</option>
-              <option value="tourism">✈️ Du lịch & Dịch vụ</option>
-              <option value="healthcare">🏥 Y tế & Dược phẩm</option>
-              <option value="energy">⚡ Năng lượng & Điện lực</option>
+              <option value="software">📱 Phần mềm</option>
+              <option value="transportation">🚚 Vận tải</option>
+              <option value="logistics">📮 Logistics</option>
+              <option value="tourism">✈️ Du lịch</option>
+              <option value="hospitality">🏨 Khách sạn - Nhà hàng</option>
+              <option value="services">🎯 Dịch vụ</option>
+              <option value="healthcare">🏥 Y tế</option>
+              <option value="pharmaceutical">💊 Dược phẩm</option>
+              <option value="energy">⚡ Năng lượng</option>
+              <option value="electricity">🔌 Điện lực</option>
+              <option value="mining">⛏️ Khai khoáng</option>
+              <option value="education">🎓 Giáo dục</option>
+              <option value="media">📺 Truyền thông</option>
+              <option value="textile">👔 Dệt may</option>
+              <option value="food">🍔 Thực phẩm & Đồ uống</option>
             </select>
+          </div>
 
+          <!-- Các nút chức năng theo luồng -->
+          <div v-if="selectedIndustry" class="dashboard-actions">
+            <!-- Bước 1: AI Lấy dữ liệu -->
             <button
-              @click="analyzeIndustry"
+              @click="fetchIndustryData"
               class="btn btn-primary"
-              :disabled="!selectedIndustry || isAnalyzingIndustry"
-              style="margin-top: 1.5rem; width: 100%; font-size: 1rem;"
+              :disabled="isFetchingData"
+              style="width: 100%; margin-bottom: 1rem;"
             >
-              {{ isAnalyzingIndustry ? '⏳ Đang phân tích dữ liệu...' : '🤖 Phân tích ngành với AI' }}
+              {{ isFetchingData ? '⏳ Đang lấy dữ liệu...' : '🔄 AI Lấy dữ liệu tự động' }}
+            </button>
+
+            <!-- Bước 2: Xem biểu đồ -->
+            <button
+              @click="showCharts"
+              class="btn btn-secondary"
+              :disabled="!industryData || isShowingCharts"
+              style="width: 100%; margin-bottom: 1rem;"
+            >
+              {{ isShowingCharts ? '⏳ Đang tạo biểu đồ...' : '📊 Xem biểu đồ & Phân tích sơ bộ' }}
+            </button>
+
+            <!-- Bước 3: Phân tích sâu -->
+            <button
+              @click="deepAnalyze"
+              class="btn btn-accent"
+              :disabled="!chartsData || isDeepAnalyzing"
+              style="width: 100%;"
+            >
+              {{ isDeepAnalyzing ? '⏳ Đang phân tích sâu...' : '🔍 Phân tích sâu - Đánh giá tín dụng' }}
             </button>
           </div>
 
-          <!-- Kết quả phân tích -->
-          <div v-if="industryAnalysis" class="industry-analysis-container">
-            <div class="analysis-box" style="animation: fadeInUp 0.6s ease-out;">
-              <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; font-size: 1.5rem; text-align: center;">
-                📊 Phân tích ngành: {{ getIndustryName(selectedIndustry) }}
-              </h3>
+          <!-- Kết quả: Hiển thị biểu đồ -->
+          <div v-if="chartsData" class="charts-section" style="margin-top: 2rem;">
+            <h3 style="color: #FF6B9D; font-size: 1.3rem; margin-bottom: 1rem; text-align: center;">
+              📊 Biểu đồ dữ liệu: {{ getIndustryName(selectedIndustry) }}
+            </h3>
+            <div id="industry-charts-container" style="width: 100%; min-height: 400px;"></div>
 
-              <!-- Nội dung phân tích từ AI -->
-              <div class="analysis-content" style="font-size: 1rem; line-height: 1.8;">
-                {{ industryAnalysis }}
+            <!-- Phân tích sơ bộ từ AI -->
+            <div v-if="briefAnalysis" class="analysis-box" style="margin-top: 1.5rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 1rem;">
+                🤖 Phân tích sơ bộ từ AI
+              </h4>
+              <div class="analysis-content" style="font-size: 0.95rem; line-height: 1.7;">
+                {{ briefAnalysis }}
               </div>
+            </div>
+          </div>
 
-              <!-- Charts placeholder - sẽ được render từ dữ liệu -->
-              <div v-if="industryCharts && industryCharts.length > 0" style="margin-top: 2rem;">
-                <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem;">
-                  📈 Biểu đồ trực quan
-                </h4>
-                <div class="charts-grid">
-                  <div v-for="(chart, index) in industryCharts" :key="index" class="chart-item">
-                    <div class="chart-placeholder">
-                      <p>{{ chart.title }}</p>
-                      <div class="chart-data">{{ chart.description }}</div>
-                    </div>
-                  </div>
-                </div>
+          <!-- Kết quả: Phân tích sâu -->
+          <div v-if="deepAnalysisResult" class="deep-analysis-section" style="margin-top: 2rem;">
+            <div class="analysis-box" style="border: 3px solid #FF6B9D;">
+              <h3 style="color: #FF1493; font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; font-weight: 900;">
+                🎯 Phân tích sâu - Đánh giá tín dụng
+              </h3>
+              <div class="analysis-content" style="font-size: 1rem; line-height: 1.8; font-weight: 600;">
+                {{ deepAnalysisResult }}
               </div>
             </div>
           </div>
@@ -363,8 +438,9 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import axios from 'axios'
+import * as echarts from 'echarts'
 import RiskChart from './components/RiskChart.vue'
 import IndicatorsChart from './components/IndicatorsChart.vue'
 
@@ -399,11 +475,20 @@ export default {
     // Export
     const isExporting = ref(false)
 
-    // Dashboard Industry Analysis
+    // Dashboard Industry Analysis - OLD (giữ lại cho tương thích)
     const selectedIndustry = ref('')
     const isAnalyzingIndustry = ref(false)
     const industryAnalysis = ref('')
     const industryCharts = ref([])
+
+    // Dashboard Industry Analysis - NEW
+    const isFetchingData = ref(false)
+    const industryData = ref(null)
+    const isShowingCharts = ref(false)
+    const chartsData = ref(null)
+    const briefAnalysis = ref('')
+    const isDeepAnalyzing = ref(false)
+    const deepAnalysisResult = ref('')
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -592,16 +677,35 @@ export default {
     const getIndustryName = (industry) => {
       const names = {
         'overview': 'Tổng quan Kinh tế Việt Nam',
-        'agriculture': 'Nông nghiệp & Lâm nghiệp',
-        'manufacturing': 'Sản xuất & Chế biến',
-        'construction': 'Xây dựng & Bất động sản',
-        'retail': 'Bán lẻ & Thương mại',
-        'finance': 'Tài chính & Ngân hàng',
+        'agriculture': 'Nông nghiệp',
+        'forestry': 'Lâm nghiệp',
+        'fishing': 'Thủy sản',
+        'manufacturing': 'Sản xuất công nghiệp',
+        'processing': 'Chế biến',
+        'construction': 'Xây dựng',
+        'realestate': 'Bất động sản',
+        'retail': 'Bán lẻ',
+        'wholesale': 'Bán sỉ',
+        'trading': 'Thương mại',
+        'finance': 'Tài chính',
+        'banking': 'Ngân hàng',
+        'insurance': 'Bảo hiểm',
         'technology': 'Công nghệ Thông tin',
-        'transportation': 'Vận tải & Logistics',
-        'tourism': 'Du lịch & Dịch vụ',
-        'healthcare': 'Y tế & Dược phẩm',
-        'energy': 'Năng lượng & Điện lực'
+        'software': 'Phần mềm',
+        'transportation': 'Vận tải',
+        'logistics': 'Logistics',
+        'tourism': 'Du lịch',
+        'hospitality': 'Khách sạn - Nhà hàng',
+        'services': 'Dịch vụ',
+        'healthcare': 'Y tế',
+        'pharmaceutical': 'Dược phẩm',
+        'energy': 'Năng lượng',
+        'electricity': 'Điện lực',
+        'mining': 'Khai khoáng',
+        'education': 'Giáo dục',
+        'media': 'Truyền thông',
+        'textile': 'Dệt may',
+        'food': 'Thực phẩm & Đồ uống'
       }
       return names[industry] || industry
     }
@@ -637,6 +741,123 @@ export default {
       }
     }
 
+    // NEW Dashboard Methods
+    const fetchIndustryData = async () => {
+      if (!selectedIndustry.value) return
+
+      isFetchingData.value = true
+      industryData.value = null
+      chartsData.value = null
+      briefAnalysis.value = ''
+      deepAnalysisResult.value = ''
+
+      try {
+        const requestData = {
+          industry: selectedIndustry.value,
+          industry_name: getIndustryName(selectedIndustry.value)
+        }
+
+        const response = await axios.post(`${API_BASE}/fetch-industry-data`, requestData)
+
+        if (response.data.status === 'success') {
+          industryData.value = response.data.data
+          alert('✅ Đã lấy dữ liệu thành công! Nhấn "Xem biểu đồ" để tiếp tục.')
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi lấy dữ liệu: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isFetchingData.value = false
+      }
+    }
+
+    const showCharts = async () => {
+      if (!industryData.value) return
+
+      isShowingCharts.value = true
+      chartsData.value = null
+      briefAnalysis.value = ''
+
+      try {
+        const requestData = {
+          industry: selectedIndustry.value,
+          industry_name: getIndustryName(selectedIndustry.value),
+          data: industryData.value
+        }
+
+        const response = await axios.post(`${API_BASE}/generate-charts`, requestData)
+
+        if (response.data.status === 'success') {
+          chartsData.value = response.data.charts_data
+          briefAnalysis.value = response.data.brief_analysis
+
+          // Render charts using ECharts
+          await nextTick()
+          renderCharts(response.data.charts_data)
+
+          // Scroll to charts
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi tạo biểu đồ: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isShowingCharts.value = false
+      }
+    }
+
+    const renderCharts = (chartsDataArray) => {
+      const container = document.getElementById('industry-charts-container')
+      if (!container) return
+
+      // Clear container
+      container.innerHTML = ''
+
+      // Tạo nhiều biểu đồ ECharts
+      chartsDataArray.forEach((chartConfig, index) => {
+        const chartDiv = document.createElement('div')
+        chartDiv.id = `chart-${index}`
+        chartDiv.style.width = '100%'
+        chartDiv.style.height = '400px'
+        chartDiv.style.marginBottom = '2rem'
+        container.appendChild(chartDiv)
+
+        const chartInstance = echarts.init(chartDiv)
+        chartInstance.setOption(chartConfig)
+      })
+    }
+
+    const deepAnalyze = async () => {
+      if (!chartsData.value) return
+
+      isDeepAnalyzing.value = true
+      deepAnalysisResult.value = ''
+
+      try {
+        const requestData = {
+          industry: selectedIndustry.value,
+          industry_name: getIndustryName(selectedIndustry.value),
+          data: industryData.value,
+          brief_analysis: briefAnalysis.value
+        }
+
+        const response = await axios.post(`${API_BASE}/deep-analyze-industry`, requestData)
+
+        if (response.data.status === 'success') {
+          deepAnalysisResult.value = response.data.deep_analysis
+
+          // Scroll to deep analysis
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi phân tích sâu: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isDeepAnalyzing.value = false
+      }
+    }
+
     return {
       // ✅ TAB STATE
       activeTab,
@@ -657,11 +878,19 @@ export default {
       geminiAnalysis,
       // Export
       isExporting,
-      // Dashboard
+      // Dashboard - OLD
       selectedIndustry,
       isAnalyzingIndustry,
       industryAnalysis,
       industryCharts,
+      // Dashboard - NEW
+      isFetchingData,
+      industryData,
+      isShowingCharts,
+      chartsData,
+      briefAnalysis,
+      isDeepAnalyzing,
+      deepAnalysisResult,
       // Methods
       handleTrainFile,
       trainModel,
@@ -675,7 +904,11 @@ export default {
       getLendingDecisionIcon,
       getLendingDecisionText,
       getIndustryName,
-      analyzeIndustry
+      analyzeIndustry,
+      // Dashboard - NEW Methods
+      fetchIndustryData,
+      showCharts,
+      deepAnalyze
     }
   }
 }
