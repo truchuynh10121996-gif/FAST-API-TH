@@ -269,6 +269,48 @@ async def analyze_with_gemini(request_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích bằng Gemini: {str(e)}")
 
 
+@app.post("/analyze-industry")
+async def analyze_industry(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích ngành nghề bằng Gemini API
+
+    Args:
+        request_data: Dict chứa industry code và industry_name
+
+    Returns:
+        Dict chứa kết quả phân tích ngành và dữ liệu charts
+    """
+    try:
+        industry = request_data.get('industry', '')
+        industry_name = request_data.get('industry_name', '')
+
+        if not industry or not industry_name:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin industry hoặc industry_name"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Phân tích ngành
+        result = analyzer.analyze_industry(industry, industry_name)
+
+        return {
+            "status": "success",
+            "analysis": result["analysis"],
+            "charts": result.get("charts", [])
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích ngành: {str(e)}")
+
+
 @app.post("/set-gemini-key")
 async def set_gemini_key(request: GeminiAPIKeyRequest):
     """

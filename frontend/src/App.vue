@@ -3,7 +3,7 @@
     <!-- Khoảng trống 1cm trước header -->
     <div class="header-spacer"></div>
 
-    <!-- Header mới với tông màu hồng lung linh -->
+    <!-- Header mới với tông màu hồng lung linh - GIẢM KÍCH THƯỚC -->
     <header class="header">
       <div class="logo-container">
         <img
@@ -12,14 +12,15 @@
           class="logo"
         />
       </div>
+      <!-- Tiêu đề nằm ngang với logo -->
+      <div class="title-section-inline">
+        <h1 class="main-title">CHƯƠNG TRÌNH ĐÁNH GIÁ RỦI RO TÍN DỤNG</h1>
+        <h2 class="sub-title">Dự báo xác suất Vỡ nợ KHDN (PD) & Phân tích AI chuyên sâu</h2>
+      </div>
     </header>
 
-    <!-- Phần tiêu đề đặt dưới header -->
-    <div class="title-section">
-      <h1 class="main-title">CHƯƠNG TRÌNH ĐÁNH GIÁ RỦI RO TÍN DỤNG</h1>
-      <h2 class="sub-title">Dự báo xác suất Vỡ nợ KHDN (PD) & Phân tích AI chuyên sâu</h2>
-      <div class="title-divider"></div>
-    </div>
+    <!-- Divider sau header -->
+    <div class="title-divider"></div>
 
     <!-- ✅ TAB SYSTEM - Thay thế Sidebar -->
     <div class="tabs-container">
@@ -29,6 +30,13 @@
         :class="{ active: activeTab === 'predict' }"
       >
         🔮 Dự Báo PD
+      </button>
+      <button
+        @click="activeTab = 'dashboard'"
+        class="tab-button"
+        :class="{ active: activeTab === 'dashboard' }"
+      >
+        📊 Dashboard Tài Chính
       </button>
       <button
         @click="activeTab = 'train'"
@@ -182,10 +190,9 @@
                   class="pd-card pd-card-stacking"
                   :class="getRiskClass(predictionResult.pd_stacking)"
                 >
-                  <div class="pd-label-stacking">🎯 PD - Stacking (Tổng hợp 3 mô hình)</div>
+                  <div class="pd-label-stacking">🎯 PD - Stacking</div>
                   <div class="pd-value-stacking">{{ (predictionResult.pd_stacking * 100).toFixed(2) }}%</div>
                   <div class="pd-status-stacking">{{ getRiskLabel(predictionResult.pd_stacking) }}</div>
-                  <div class="pd-note">💡 Đây là kết quả dự báo chính được tổng hợp từ 3 mô hình trên</div>
                 </div>
               </div>
             </div>
@@ -204,12 +211,12 @@
               :disabled="isAnalyzing"
               style="width: 100%;"
             >
-              {{ isAnalyzing ? '⏳ Đang phân tích...' : '🤖 Phân tích chuyên sâu bằng Gemini AI' }}
+              {{ isAnalyzing ? '⏳ Đang phân tích...' : '🤖 Phân tích chuyên sâu bằng AI' }}
             </button>
 
             <div v-if="geminiAnalysis" class="analysis-box">
               <h3 style="margin-bottom: 1rem; color: #FF6B9D; font-size: 1.4rem;">
-                🧠 Phân tích & Khuyến nghị từ Gemini AI
+                🧠 Phân tích & Khuyến nghị từ AI
               </h3>
 
               <!-- Quyết định cuối cùng CHO VAY / KHÔNG CHO VAY -->
@@ -234,6 +241,76 @@
             </button>
           </div>
         </div>
+        </div>
+      </div>
+
+      <!-- ✅ TAB CONTENT: Dashboard Tài Chính -->
+      <div v-if="activeTab === 'dashboard'" class="tab-content">
+        <div class="card">
+          <h2 class="card-title">📊 Dashboard Tài Chính - Phân tích Ngành nghề</h2>
+
+          <!-- Dropdown chọn ngành -->
+          <div style="margin-bottom: 2rem;">
+            <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
+              🏢 Chọn ngành nghề để phân tích:
+            </label>
+            <select
+              v-model="selectedIndustry"
+              class="input-field"
+              style="font-size: 1rem; padding: 0.8rem;"
+            >
+              <option value="">-- Chọn ngành nghề --</option>
+              <option value="overview">📈 Tổng quan Kinh tế Việt Nam</option>
+              <option value="agriculture">🌾 Nông nghiệp & Lâm nghiệp</option>
+              <option value="manufacturing">🏭 Sản xuất & Chế biến</option>
+              <option value="construction">🏗️ Xây dựng & Bất động sản</option>
+              <option value="retail">🛒 Bán lẻ & Thương mại</option>
+              <option value="finance">🏦 Tài chính & Ngân hàng</option>
+              <option value="technology">💻 Công nghệ Thông tin</option>
+              <option value="transportation">🚚 Vận tải & Logistics</option>
+              <option value="tourism">✈️ Du lịch & Dịch vụ</option>
+              <option value="healthcare">🏥 Y tế & Dược phẩm</option>
+              <option value="energy">⚡ Năng lượng & Điện lực</option>
+            </select>
+
+            <button
+              @click="analyzeIndustry"
+              class="btn btn-primary"
+              :disabled="!selectedIndustry || isAnalyzingIndustry"
+              style="margin-top: 1.5rem; width: 100%; font-size: 1rem;"
+            >
+              {{ isAnalyzingIndustry ? '⏳ Đang phân tích dữ liệu...' : '🤖 Phân tích ngành với AI' }}
+            </button>
+          </div>
+
+          <!-- Kết quả phân tích -->
+          <div v-if="industryAnalysis" class="industry-analysis-container">
+            <div class="analysis-box" style="animation: fadeInUp 0.6s ease-out;">
+              <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; font-size: 1.5rem; text-align: center;">
+                📊 Phân tích ngành: {{ getIndustryName(selectedIndustry) }}
+              </h3>
+
+              <!-- Nội dung phân tích từ AI -->
+              <div class="analysis-content" style="font-size: 1rem; line-height: 1.8;">
+                {{ industryAnalysis }}
+              </div>
+
+              <!-- Charts placeholder - sẽ được render từ dữ liệu -->
+              <div v-if="industryCharts && industryCharts.length > 0" style="margin-top: 2rem;">
+                <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem;">
+                  📈 Biểu đồ trực quan
+                </h4>
+                <div class="charts-grid">
+                  <div v-for="(chart, index) in industryCharts" :key="index" class="chart-item">
+                    <div class="chart-placeholder">
+                      <p>{{ chart.title }}</p>
+                      <div class="chart-data">{{ chart.description }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -321,6 +398,12 @@ export default {
 
     // Export
     const isExporting = ref(false)
+
+    // Dashboard Industry Analysis
+    const selectedIndustry = ref('')
+    const isAnalyzingIndustry = ref(false)
+    const industryAnalysis = ref('')
+    const industryCharts = ref([])
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -505,6 +588,55 @@ export default {
       return pdPercent < 10 ? 'CHO VAY' : 'KHÔNG CHO VAY'
     }
 
+    // Dashboard Industry Analysis
+    const getIndustryName = (industry) => {
+      const names = {
+        'overview': 'Tổng quan Kinh tế Việt Nam',
+        'agriculture': 'Nông nghiệp & Lâm nghiệp',
+        'manufacturing': 'Sản xuất & Chế biến',
+        'construction': 'Xây dựng & Bất động sản',
+        'retail': 'Bán lẻ & Thương mại',
+        'finance': 'Tài chính & Ngân hàng',
+        'technology': 'Công nghệ Thông tin',
+        'transportation': 'Vận tải & Logistics',
+        'tourism': 'Du lịch & Dịch vụ',
+        'healthcare': 'Y tế & Dược phẩm',
+        'energy': 'Năng lượng & Điện lực'
+      }
+      return names[industry] || industry
+    }
+
+    const analyzeIndustry = async () => {
+      if (!selectedIndustry.value) return
+
+      isAnalyzingIndustry.value = true
+      industryAnalysis.value = ''
+      industryCharts.value = []
+
+      try {
+        const requestData = {
+          industry: selectedIndustry.value,
+          industry_name: getIndustryName(selectedIndustry.value)
+        }
+
+        const response = await axios.post(`${API_BASE}/analyze-industry`, requestData)
+
+        if (response.data.status === 'success') {
+          industryAnalysis.value = response.data.analysis
+          industryCharts.value = response.data.charts || []
+
+          // Scroll to results
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi phân tích ngành: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isAnalyzingIndustry.value = false
+      }
+    }
+
     return {
       // ✅ TAB STATE
       activeTab,
@@ -525,6 +657,11 @@ export default {
       geminiAnalysis,
       // Export
       isExporting,
+      // Dashboard
+      selectedIndustry,
+      isAnalyzingIndustry,
+      industryAnalysis,
+      industryCharts,
       // Methods
       handleTrainFile,
       trainModel,
@@ -536,7 +673,9 @@ export default {
       getRiskLabel,
       getLendingDecisionClass,
       getLendingDecisionIcon,
-      getLendingDecisionText
+      getLendingDecisionText,
+      getIndustryName,
+      analyzeIndustry
     }
   }
 }
