@@ -298,9 +298,9 @@ class ExcelProcessor:
 
         # X_12: Vòng quay hàng tồn kho
         # ✅ CÔNG THỨC: Giá vốn hàng bán (BCTN) / Bình quân hàng tồn kho (CDKT)
-        # ✅ LẤY GIÁ TRỊ DƯƠNG, KHÔNG LẤY GIÁ TRỊ ÂM
+        # ✅ CHUYỂN GIÁ TRỊ ÂM THÀNH DƯƠNG (LẤY GIÁ TRỊ TUYỆT ĐỐI)
         x12_value = gia_von_hang_ban / binh_quan_hang_ton_kho if binh_quan_hang_ton_kho != 0 else 0
-        indicators['X_12'] = max(0, x12_value)  # Chỉ lấy giá trị dương
+        indicators['X_12'] = abs(x12_value)  # Lấy giá trị tuyệt đối (chuyển âm thành dương)
 
         # X_13: Kỳ thu tiền bình quân
         indicators['X_13'] = 365 / (doanh_thu_thuan / binh_quan_phai_thu) if (doanh_thu_thuan != 0 and binh_quan_phai_thu != 0) else 0

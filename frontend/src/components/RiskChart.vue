@@ -1,23 +1,27 @@
 <template>
   <div>
-    <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.5rem; font-weight: 700;">
+    <h3 class="chart-main-title">
       📊 Biểu đồ So sánh Xác suất Vỡ nợ (PD) từ 4 Models
     </h3>
 
-    <!-- Hướng dẫn đọc -->
-    <div class="chart-guide">
-      <p class="guide-text">
-        📖 <strong>Cách đọc biểu đồ:</strong> Biểu đồ cột so sánh xác suất vỡ nợ (PD) dự báo bởi 4 mô hình AI khác nhau.
-        Màu sắc thể hiện mức độ rủi ro: <span class="color-tag green">🟢 Xanh = Thấp</span>,
-        <span class="color-tag yellow">🟡 Vàng = Trung bình</span>,
-        <span class="color-tag red">🔴 Đỏ = Cao</span>.
-        <strong>Stacking Model</strong> là kết quả tổng hợp từ 3 mô hình còn lại và được tin cậy nhất.
-      </p>
-    </div>
+    <!-- Container nằm ngang: Biểu đồ bên trái, Hướng dẫn bên phải -->
+    <div class="chart-horizontal-layout">
+      <!-- Biểu đồ cột - chiếm 50% -->
+      <div class="chart-container-compact">
+        <Bar :data="chartData" :options="chartOptions" />
+      </div>
 
-    <!-- Biểu đồ cột duy nhất -->
-    <div class="chart-container">
-      <Bar :data="chartData" :options="chartOptions" />
+      <!-- Hướng dẫn đọc - chiếm 50% -->
+      <div class="chart-guide-compact">
+        <div class="guide-title">📖 Cách đọc biểu đồ</div>
+        <ul class="guide-list">
+          <li>Biểu đồ cột so sánh xác suất vỡ nợ (PD) từ 4 mô hình AI</li>
+          <li><span class="color-dot green">●</span> <strong>Xanh:</strong> Rủi ro thấp (&lt;5%)</li>
+          <li><span class="color-dot yellow">●</span> <strong>Vàng:</strong> Rủi ro trung bình (5-15%)</li>
+          <li><span class="color-dot red">●</span> <strong>Đỏ:</strong> Rủi ro cao (&gt;15%)</li>
+          <li class="guide-highlight">⭐ <strong>Stacking Model</strong> là kết quả tổng hợp tin cậy nhất</li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -90,7 +94,7 @@ export default {
     const chartOptions = {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 2,
+      aspectRatio: 1.3,
       plugins: {
         legend: {
           display: true,
@@ -201,51 +205,99 @@ export default {
 </script>
 
 <style scoped>
-.chart-guide {
-  background: linear-gradient(135deg,
-    rgba(255, 240, 247, 0.95) 0%,
-    rgba(255, 255, 255, 0.95) 100%);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border: 2px solid rgba(255, 182, 193, 0.3);
-  box-shadow: 0 4px 12px rgba(255, 182, 193, 0.2);
+.chart-main-title {
+  margin-bottom: 1rem;
+  color: #FF6B9D;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
-.guide-text {
-  color: #4A4A4A;
-  font-size: 0.95rem;
-  line-height: 1.8;
+/* Layout nằm ngang - giảm 50% kích thước */
+.chart-horizontal-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+@media (max-width: 968px) {
+  .chart-horizontal-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Container biểu đồ - nhỏ gọn */
+.chart-container-compact {
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 4px 14px rgba(255, 182, 193, 0.25);
+  border: 2px solid rgba(255, 182, 193, 0.3);
+}
+
+/* Hướng dẫn - nhỏ gọn, đẹp */
+.chart-guide-compact {
+  background: linear-gradient(135deg,
+    rgba(255, 245, 250, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%);
+  border-radius: 14px;
+  padding: 1rem;
+  border: 2px solid rgba(255, 182, 193, 0.3);
+  box-shadow: 0 4px 14px rgba(255, 182, 193, 0.25);
+}
+
+.guide-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #FF6B9D;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(255, 182, 193, 0.3);
+}
+
+.guide-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.color-tag {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-weight: 600;
-  white-space: nowrap;
+.guide-list li {
+  font-size: 0.75rem;
+  color: #4A4A4A;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  padding-left: 0.3rem;
 }
 
-.color-tag.green {
+.guide-list li:last-child {
+  margin-bottom: 0;
+}
+
+.color-dot {
+  font-size: 1rem;
+  margin-right: 0.3rem;
+}
+
+.color-dot.green {
   color: #00a651;
-  background: rgba(0, 166, 81, 0.1);
 }
 
-.color-tag.yellow {
+.color-dot.yellow {
   color: #ff9800;
-  background: rgba(255, 152, 0, 0.1);
 }
 
-.color-tag.red {
+.color-dot.red {
   color: #e53935;
-  background: rgba(229, 57, 53, 0.1);
 }
 
-.chart-container {
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 6px 20px rgba(255, 182, 193, 0.3);
-  border: 2px solid rgba(255, 182, 193, 0.3);
+.guide-highlight {
+  background: rgba(255, 182, 193, 0.15);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  border-left: 3px solid #FF6B9D;
 }
 </style>

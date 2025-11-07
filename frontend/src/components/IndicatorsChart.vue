@@ -22,6 +22,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Bảng note hướng dẫn xem biểu đồ -->
+    <div class="chart-note-guide">
+      <div class="note-title">📌 Hướng dẫn xem biểu đồ:</div>
+      <ul class="note-list">
+        <li><strong>Biểu đồ Cột:</strong> Thể hiện giá trị tuyệt đối của từng chỉ số, dễ so sánh độ lớn giữa các chỉ số</li>
+        <li><strong>Biểu đồ Radar:</strong> Cho cái nhìn tổng quan toàn diện về 14 chỉ số, giúp phát hiện điểm mạnh/yếu của doanh nghiệp</li>
+        <li><strong>Màu sắc:</strong> Mỗi chỉ số có màu riêng biệt để dễ nhận diện</li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -301,5 +311,46 @@ export default {
   width: 100%;
   height: auto;
   max-height: 280px;
+}
+
+/* Bảng note hướng dẫn - nhỏ gọn */
+.chart-note-guide {
+  background: linear-gradient(135deg,
+    rgba(255, 250, 240, 0.95) 0%,
+    rgba(255, 245, 250, 0.95) 100%);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin-top: 1rem;
+  border: 1.5px dashed rgba(255, 182, 193, 0.4);
+  box-shadow: 0 2px 8px rgba(255, 182, 193, 0.15);
+}
+
+.note-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FF6B9D;
+  margin-bottom: 0.5rem;
+}
+
+.note-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.note-list li {
+  font-size: 0.75rem;
+  color: #4A4A4A;
+  line-height: 1.5;
+  margin-bottom: 0.3rem;
+}
+
+.note-list li:last-child {
+  margin-bottom: 0;
+}
+
+.note-list strong {
+  color: #FF6B9D;
+  font-weight: 600;
 }
 </style>
