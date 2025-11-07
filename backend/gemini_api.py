@@ -464,6 +464,87 @@ Trả lời bằng tiếng Việt, chuyên nghiệp.
         except Exception as e:
             return f"❌ Lỗi khi phân tích sâu: {str(e)}"
 
+    def analyze_pd_with_industry(self, indicators_dict: Dict[str, float], industry: str, industry_name: str) -> str:
+        """
+        Phân tích PD kết hợp với ngành nghề - tạo biểu đồ và phân tích chuyên sâu
+
+        Args:
+            indicators_dict: Dict chứa 14 chỉ số tài chính
+            industry: Mã ngành
+            industry_name: Tên ngành
+
+        Returns:
+            Phân tích chuyên sâu từ Gemini
+        """
+        # Tạo chuỗi hiển thị 14 chỉ số
+        indicators_str = f"""
+X_1 (Hệ số biên lợi nhuận gộp): {indicators_dict.get('X_1', 0):.4f}
+X_2 (Hệ số biên lợi nhuận trước thuế): {indicators_dict.get('X_2', 0):.4f}
+X_3 (ROA): {indicators_dict.get('X_3', 0):.4f}
+X_4 (ROE): {indicators_dict.get('X_4', 0):.4f}
+X_5 (Hệ số nợ trên tài sản): {indicators_dict.get('X_5', 0):.4f}
+X_6 (Hệ số nợ trên vốn CSH): {indicators_dict.get('X_6', 0):.4f}
+X_7 (Khả năng thanh toán hiện hành): {indicators_dict.get('X_7', 0):.4f}
+X_8 (Khả năng thanh toán nhanh): {indicators_dict.get('X_8', 0):.4f}
+X_9 (Hệ số khả năng trả lãi): {indicators_dict.get('X_9', 0):.4f}
+X_10 (Hệ số khả năng trả nợ gốc): {indicators_dict.get('X_10', 0):.4f}
+X_11 (Khả năng tạo tiền/Vốn CSH): {indicators_dict.get('X_11', 0):.4f}
+X_12 (Vòng quay hàng tồn kho): {indicators_dict.get('X_12', 0):.4f}
+X_13 (Kỳ thu tiền bình quân - ngày): {indicators_dict.get('X_13', 0):.2f}
+X_14 (Hiệu suất sử dụng tài sản): {indicators_dict.get('X_14', 0):.4f}
+"""
+
+        prompt = f"""
+Bạn là chuyên gia phân tích tín dụng của Agribank với 20 năm kinh nghiệm.
+
+Dựa trên 14 chỉ số tài chính của doanh nghiệp và ngành nghề "{industry_name}", hãy phân tích chuyên sâu ảnh hưởng đến quyết định cho vay.
+
+**14 CHỈ SỐ TÀI CHÍNH CỦA DOANH NGHIỆP:**
+{indicators_str}
+
+**NGÀNH NGHỀ:** {industry_name}
+
+**YÊU CẦU PHÂN TÍCH (500-600 từ):**
+
+1. **So sánh chỉ số doanh nghiệp với trung bình ngành** (150 từ):
+   - Đánh giá các chỉ số sinh lời (X1-X4) so với ngành
+   - Đánh giá đòn bẩy tài chính (X5-X6) so với ngành
+   - Đánh giá khả năng thanh toán (X7-X8) so với ngành
+   - Đánh giá hiệu quả hoạt động (X9-X14) so với ngành
+
+2. **Phân tích rủi ro ngành kết hợp với tình hình doanh nghiệp** (200 từ):
+   - Doanh nghiệp có phù hợp với đặc thù ngành không?
+   - Những rủi ro đặc thù của ngành ảnh hưởng như thế nào?
+   - Doanh nghiệp có khả năng chống chịu với rủi ro ngành không?
+   - Xu hướng ngành có thuận lợi cho doanh nghiệp không?
+
+3. **Khuyến nghị cho vay cụ thể** (150 từ):
+   - **QUYẾT ĐỊNH**: CHO VAY / KHÔNG CHO VAY / CHO VAY CÓ ĐIỀU KIỆN
+   - **Hạn mức đề xuất**: Cụ thể (VD: 5-10 tỷ, 10-20 tỷ, > 20 tỷ)
+   - **Lãi suất**: Ưu đãi / Tiêu chuẩn / Cao hơn (bao nhiêu %)
+   - **Thời hạn vay**: Ngắn hạn (< 1 năm) / Trung hạn (1-5 năm) / Dài hạn (> 5 năm)
+   - **Tài sản đảm bảo**: Yêu cầu / Không yêu cầu, tỷ lệ TSBĐ/Hạn mức
+   - **Điều kiện đặc biệt** (nếu có)
+
+4. **Các chỉ số cần theo dõi đặc biệt** (100 từ):
+   - Chỉ số nào cần theo dõi sát sao?
+   - Tần suất kiểm tra đề xuất
+   - Ngưỡng cảnh báo
+
+**QUAN TRỌNG**:
+- Phân tích phải CỤ THỂ, SỐ LIỆU, RÕ RÀNG
+- Khuyến nghị phải có giá trị thực tiễn cho Agribank
+- Tập trung vào ẢNH HƯỞNG CỦA NGÀNH đến quyết định
+
+Trả lời bằng tiếng Việt, chuyên nghiệp.
+"""
+
+        try:
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"❌ Lỗi khi phân tích PD kết hợp: {str(e)}"
+
     def analyze_industry(self, industry: str, industry_name: str) -> Dict[str, Any]:
         """
         Phân tích tình hình ngành nghề và tác động đến quyết định cho vay
