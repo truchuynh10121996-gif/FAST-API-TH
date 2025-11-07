@@ -54,7 +54,7 @@
       <!-- ✅ TAB CONTENT: Dự Báo PD -->
       <div v-if="activeTab === 'predict'" class="tab-content">
         <div class="card">
-          <h2 class="card-title">🔮 Dự báo Rủi ro Tín dụng từ Hồ sơ Doanh nghiệp</h2>
+          <h2 class="card-title">🔮 Dự báo PD & Phân tích AI cho Hồ sơ mới</h2>
 
         <!-- Upload XLSX File -->
         <div style="margin-bottom: 2rem;">
@@ -251,138 +251,321 @@
         <div class="card">
           <h2 class="card-title">📊 Dashboard Tài Chính - Phân tích Ngành nghề</h2>
 
-          <!-- Bảng mô tả và hướng dẫn sử dụng -->
-          <div class="dashboard-guide">
-            <h3 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 0.8rem;">
-              📋 Giới thiệu Dashboard
-            </h3>
-            <p style="margin-bottom: 0.5rem; line-height: 1.6;">
-              Dashboard Tài Chính giúp bạn phân tích xu hướng và dữ liệu kinh tế theo từng ngành nghề tại Việt Nam.
-              Hệ thống sử dụng AI (Gemini) để thu thập, phân tích dữ liệu mới nhất và đưa ra khuyến nghị cho quyết định tín dụng.
-            </p>
-            <div class="guide-steps">
-              <div class="guide-step">
-                <span class="step-number">1</span>
-                <span class="step-text">Chọn ngành nghề muốn phân tích</span>
-              </div>
-              <div class="guide-step">
-                <span class="step-number">2</span>
-                <span class="step-text">Nhấn "🔄 AI Lấy dữ liệu" để thu thập thông tin mới nhất</span>
-              </div>
-              <div class="guide-step">
-                <span class="step-number">3</span>
-                <span class="step-text">Nhấn "📊 Xem biểu đồ" để hiển thị dữ liệu trực quan + phân tích sơ bộ</span>
-              </div>
-              <div class="guide-step">
-                <span class="step-number">4</span>
-                <span class="step-text">Nhấn "🔍 Phân tích sâu" để AI đánh giá ảnh hưởng đến quyết định cho vay</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dropdown chọn ngành - TÁCH RIÊNG TỪNG NGÀNH -->
-          <div style="margin: 2rem 0;">
-            <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
-              🏢 Chọn ngành nghề để phân tích:
-            </label>
-            <select
-              v-model="selectedIndustry"
-              class="input-field"
-              style="font-size: 1rem; padding: 0.8rem;"
-            >
-              <option value="">-- Chọn ngành nghề --</option>
-              <option value="overview">📈 Tổng quan Kinh tế Việt Nam</option>
-              <option value="agriculture">🌾 Nông nghiệp</option>
-              <option value="forestry">🌲 Lâm nghiệp</option>
-              <option value="fishing">🐟 Thủy sản</option>
-              <option value="manufacturing">🏭 Sản xuất công nghiệp</option>
-              <option value="processing">⚙️ Chế biến</option>
-              <option value="construction">🏗️ Xây dựng</option>
-              <option value="realestate">🏘️ Bất động sản</option>
-              <option value="retail">🛒 Bán lẻ</option>
-              <option value="wholesale">📦 Bán sỉ</option>
-              <option value="trading">💼 Thương mại</option>
-              <option value="finance">🏦 Tài chính</option>
-              <option value="banking">🏧 Ngân hàng</option>
-              <option value="insurance">🛡️ Bảo hiểm</option>
-              <option value="technology">💻 Công nghệ Thông tin</option>
-              <option value="software">📱 Phần mềm</option>
-              <option value="transportation">🚚 Vận tải</option>
-              <option value="logistics">📮 Logistics</option>
-              <option value="tourism">✈️ Du lịch</option>
-              <option value="hospitality">🏨 Khách sạn - Nhà hàng</option>
-              <option value="services">🎯 Dịch vụ</option>
-              <option value="healthcare">🏥 Y tế</option>
-              <option value="pharmaceutical">💊 Dược phẩm</option>
-              <option value="energy">⚡ Năng lượng</option>
-              <option value="electricity">🔌 Điện lực</option>
-              <option value="mining">⛏️ Khai khoáng</option>
-              <option value="education">🎓 Giáo dục</option>
-              <option value="media">📺 Truyền thông</option>
-              <option value="textile">👔 Dệt may</option>
-              <option value="food">🍔 Thực phẩm & Đồ uống</option>
-            </select>
-          </div>
-
-          <!-- Các nút chức năng theo luồng -->
-          <div v-if="selectedIndustry" class="dashboard-actions">
-            <!-- Bước 1: AI Lấy dữ liệu -->
+          <!-- Sub-tabs cho Dashboard -->
+          <div class="sub-tabs-container" style="margin: 1.5rem 0;">
             <button
-              @click="fetchIndustryData"
-              class="btn btn-primary"
-              :disabled="isFetchingData"
-              style="width: 100%; margin-bottom: 1rem;"
+              @click="dashboardSubTab = 'industry'"
+              class="sub-tab-button"
+              :class="{ active: dashboardSubTab === 'industry' }"
             >
-              {{ isFetchingData ? '⏳ Đang lấy dữ liệu...' : '🔄 AI Lấy dữ liệu tự động' }}
+              📈 Phân tích Ngành
             </button>
-
-            <!-- Bước 2: Xem biểu đồ -->
             <button
-              @click="showCharts"
-              class="btn btn-secondary"
-              :disabled="!industryData || isShowingCharts"
-              style="width: 100%; margin-bottom: 1rem;"
+              @click="dashboardSubTab = 'pd-industry'"
+              class="sub-tab-button"
+              :class="{ active: dashboardSubTab === 'pd-industry' }"
             >
-              {{ isShowingCharts ? '⏳ Đang tạo biểu đồ...' : '📊 Xem biểu đồ & Phân tích sơ bộ' }}
-            </button>
-
-            <!-- Bước 3: Phân tích sâu -->
-            <button
-              @click="deepAnalyze"
-              class="btn btn-accent"
-              :disabled="!chartsData || isDeepAnalyzing"
-              style="width: 100%;"
-            >
-              {{ isDeepAnalyzing ? '⏳ Đang phân tích sâu...' : '🔍 Phân tích sâu - Đánh giá tín dụng' }}
+              🎯 Kết hợp Phân tích PD chuyên sâu
             </button>
           </div>
 
-          <!-- Kết quả: Hiển thị biểu đồ -->
-          <div v-if="chartsData" class="charts-section" style="margin-top: 2rem;">
-            <h3 style="color: #FF6B9D; font-size: 1.3rem; margin-bottom: 1rem; text-align: center;">
-              📊 Biểu đồ dữ liệu: {{ getIndustryName(selectedIndustry) }}
-            </h3>
-            <div id="industry-charts-container" style="width: 100%; min-height: 400px;"></div>
-
-            <!-- Phân tích sơ bộ từ AI -->
-            <div v-if="briefAnalysis" class="analysis-box" style="margin-top: 1.5rem;">
-              <h4 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 1rem;">
-                🤖 Phân tích sơ bộ từ AI
-              </h4>
-              <div class="analysis-content" style="font-size: 0.95rem; line-height: 1.7;">
-                {{ briefAnalysis }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Kết quả: Phân tích sâu -->
-          <div v-if="deepAnalysisResult" class="deep-analysis-section" style="margin-top: 2rem;">
-            <div class="analysis-box" style="border: 3px solid #FF6B9D;">
-              <h3 style="color: #FF1493; font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; font-weight: 900;">
-                🎯 Phân tích sâu - Đánh giá tín dụng
+          <!-- SUB-TAB 1: Phân tích Ngành (GIỮ NGUYÊN) -->
+          <div v-if="dashboardSubTab === 'industry'">
+            <!-- Bảng mô tả và hướng dẫn sử dụng -->
+            <div class="dashboard-guide">
+              <h3 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 0.8rem;">
+                📋 Giới thiệu Dashboard
               </h3>
-              <div class="analysis-content" style="font-size: 1rem; line-height: 1.8; font-weight: 600;">
-                {{ deepAnalysisResult }}
+              <p style="margin-bottom: 0.5rem; line-height: 1.6;">
+                Dashboard Tài Chính giúp bạn phân tích xu hướng và dữ liệu kinh tế theo từng ngành nghề tại Việt Nam.
+                Hệ thống sử dụng AI (Gemini) để thu thập, phân tích dữ liệu mới nhất và đưa ra khuyến nghị cho quyết định tín dụng.
+              </p>
+              <div class="guide-steps">
+                <div class="guide-step">
+                  <span class="step-number">1</span>
+                  <span class="step-text">Chọn ngành nghề muốn phân tích</span>
+                </div>
+                <div class="guide-step">
+                  <span class="step-number">2</span>
+                  <span class="step-text">Nhấn "🔄 AI Lấy dữ liệu" để thu thập thông tin mới nhất</span>
+                </div>
+                <div class="guide-step">
+                  <span class="step-number">3</span>
+                  <span class="step-text">Nhấn "📊 Xem biểu đồ" để hiển thị dữ liệu trực quan + phân tích sơ bộ</span>
+                </div>
+                <div class="guide-step">
+                  <span class="step-number">4</span>
+                  <span class="step-text">Nhấn "🔍 Phân tích sâu" để AI đánh giá ảnh hưởng đến quyết định cho vay</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dropdown chọn ngành -->
+            <div style="margin: 2rem 0;">
+              <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
+                🏢 Chọn ngành nghề để phân tích:
+              </label>
+              <select
+                v-model="selectedIndustry"
+                class="input-field"
+                style="font-size: 1rem; padding: 0.8rem;"
+              >
+                <option value="">-- Chọn ngành nghề --</option>
+                <option value="overview">📈 Tổng quan Kinh tế Việt Nam</option>
+                <option value="agriculture">🌾 Nông nghiệp</option>
+                <option value="forestry">🌲 Lâm nghiệp</option>
+                <option value="fishing">🐟 Thủy sản</option>
+                <option value="manufacturing">🏭 Sản xuất công nghiệp</option>
+                <option value="processing">⚙️ Chế biến</option>
+                <option value="construction">🏗️ Xây dựng</option>
+                <option value="realestate">🏘️ Bất động sản</option>
+                <option value="retail">🛒 Bán lẻ</option>
+                <option value="wholesale">📦 Bán sỉ</option>
+                <option value="trading">💼 Thương mại</option>
+                <option value="finance">🏦 Tài chính</option>
+                <option value="banking">🏧 Ngân hàng</option>
+                <option value="insurance">🛡️ Bảo hiểm</option>
+                <option value="technology">💻 Công nghệ Thông tin</option>
+                <option value="software">📱 Phần mềm</option>
+                <option value="transportation">🚚 Vận tải</option>
+                <option value="logistics">📮 Logistics</option>
+                <option value="tourism">✈️ Du lịch</option>
+                <option value="hospitality">🏨 Khách sạn - Nhà hàng</option>
+                <option value="services">🎯 Dịch vụ</option>
+                <option value="healthcare">🏥 Y tế</option>
+                <option value="pharmaceutical">💊 Dược phẩm</option>
+                <option value="energy">⚡ Năng lượng</option>
+                <option value="electricity">🔌 Điện lực</option>
+                <option value="mining">⛏️ Khai khoáng</option>
+                <option value="education">🎓 Giáo dục</option>
+                <option value="media">📺 Truyền thông</option>
+                <option value="textile">👔 Dệt may</option>
+                <option value="food">🍔 Thực phẩm & Đồ uống</option>
+              </select>
+            </div>
+
+            <!-- Các nút chức năng theo luồng -->
+            <div v-if="selectedIndustry" class="dashboard-actions">
+              <button
+                @click="fetchIndustryData"
+                class="btn btn-primary"
+                :disabled="isFetchingData"
+                style="width: 100%; margin-bottom: 1rem;"
+              >
+                {{ isFetchingData ? '⏳ Đang lấy dữ liệu...' : '🔄 AI Lấy dữ liệu tự động' }}
+              </button>
+
+              <button
+                @click="showCharts"
+                class="btn btn-secondary"
+                :disabled="!industryData || isShowingCharts"
+                style="width: 100%; margin-bottom: 1rem;"
+              >
+                {{ isShowingCharts ? '⏳ Đang tạo biểu đồ...' : '📊 Xem biểu đồ & Phân tích sơ bộ' }}
+              </button>
+
+              <button
+                @click="deepAnalyze"
+                class="btn btn-accent"
+                :disabled="!chartsData || isDeepAnalyzing"
+                style="width: 100%;"
+              >
+                {{ isDeepAnalyzing ? '⏳ Đang phân tích sâu...' : '🔍 Phân tích sâu - Đánh giá tín dụng' }}
+              </button>
+            </div>
+
+            <!-- Kết quả: Hiển thị biểu đồ -->
+            <div v-if="chartsData" class="charts-section" style="margin-top: 2rem;">
+              <h3 style="color: #FF6B9D; font-size: 1.3rem; margin-bottom: 1rem; text-align: center;">
+                📊 Biểu đồ dữ liệu: {{ getIndustryName(selectedIndustry) }}
+              </h3>
+              <div id="industry-charts-container" style="width: 100%; min-height: 400px;"></div>
+
+              <div v-if="briefAnalysis" class="analysis-box" style="margin-top: 1.5rem;">
+                <h4 style="color: #FF6B9D; font-size: 1.1rem; margin-bottom: 1rem;">
+                  🤖 Phân tích sơ bộ từ AI
+                </h4>
+                <div class="analysis-content" style="font-size: 0.95rem; line-height: 1.7;">
+                  {{ briefAnalysis }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Kết quả: Phân tích sâu -->
+            <div v-if="deepAnalysisResult" class="deep-analysis-section" style="margin-top: 2rem;">
+              <div class="analysis-box" style="border: 3px solid #FF6B9D;">
+                <h3 style="color: #FF1493; font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; font-weight: 900;">
+                  🎯 Phân tích sâu - Đánh giá tín dụng
+                </h3>
+                <div class="analysis-content" style="font-size: 1rem; line-height: 1.8; font-weight: 600;">
+                  {{ deepAnalysisResult }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: Kết hợp Phân tích PD chuyên sâu (MỚI) -->
+          <div v-if="dashboardSubTab === 'pd-industry'">
+            <!-- Hướng dẫn sử dụng -->
+            <div class="dashboard-guide" style="margin-bottom: 2rem;">
+              <h3 style="color: #9C27B0; font-size: 1.1rem; margin-bottom: 0.8rem;">
+                🎯 Giới thiệu Phân tích PD kết hợp Ngành nghề
+              </h3>
+              <p style="margin-bottom: 0.5rem; line-height: 1.6;">
+                Tính năng này cho phép phân tích chuyên sâu 14 chỉ số tài chính của doanh nghiệp kết hợp với đặc thù ngành nghề,
+                giúp đưa ra khuyến nghị cho vay chính xác hơn.
+              </p>
+              <div class="guide-steps">
+                <div class="guide-step">
+                  <span class="step-number">1</span>
+                  <span class="step-text">Chọn ngành nghề của doanh nghiệp</span>
+                </div>
+                <div class="guide-step">
+                  <span class="step-number">2</span>
+                  <span class="step-text">Chọn nguồn chỉ số: từ Tab Dự báo hoặc tải file mới</span>
+                </div>
+                <div class="guide-step">
+                  <span class="step-number">3</span>
+                  <span class="step-text">Nhấn "Phân tích" để xem kết quả và biểu đồ</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chọn ngành nghề -->
+            <div style="margin: 1.5rem 0;">
+              <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
+                🏢 Chọn ngành nghề của doanh nghiệp:
+              </label>
+              <select
+                v-model="pdIndustrySelected"
+                class="input-field"
+                style="font-size: 1rem; padding: 0.8rem;"
+              >
+                <option value="">-- Chọn ngành nghề --</option>
+                <option value="agriculture">🌾 Nông nghiệp</option>
+                <option value="forestry">🌲 Lâm nghiệp</option>
+                <option value="fishing">🐟 Thủy sản</option>
+                <option value="manufacturing">🏭 Sản xuất công nghiệp</option>
+                <option value="processing">⚙️ Chế biến</option>
+                <option value="construction">🏗️ Xây dựng</option>
+                <option value="realestate">🏘️ Bất động sản</option>
+                <option value="retail">🛒 Bán lẻ</option>
+                <option value="wholesale">📦 Bán sỉ</option>
+                <option value="trading">💼 Thương mại</option>
+                <option value="finance">🏦 Tài chính</option>
+                <option value="banking">🏧 Ngân hàng</option>
+                <option value="insurance">🛡️ Bảo hiểm</option>
+                <option value="technology">💻 Công nghệ Thông tin</option>
+                <option value="software">📱 Phần mềm</option>
+                <option value="transportation">🚚 Vận tải</option>
+                <option value="logistics">📮 Logistics</option>
+                <option value="tourism">✈️ Du lịch</option>
+                <option value="hospitality">🏨 Khách sạn - Nhà hàng</option>
+                <option value="services">🎯 Dịch vụ</option>
+                <option value="healthcare">🏥 Y tế</option>
+                <option value="pharmaceutical">💊 Dược phẩm</option>
+                <option value="energy">⚡ Năng lượng</option>
+                <option value="electricity">🔌 Điện lực</option>
+                <option value="mining">⛏️ Khai khoáng</option>
+                <option value="education">🎓 Giáo dục</option>
+                <option value="media">📺 Truyền thông</option>
+                <option value="textile">👔 Dệt may</option>
+                <option value="food">🍔 Thực phẩm & Đồ uống</option>
+              </select>
+            </div>
+
+            <!-- Radio buttons: Chọn nguồn chỉ số -->
+            <div v-if="pdIndustrySelected" style="margin: 1.5rem 0;">
+              <label class="input-label" style="font-size: 1rem; margin-bottom: 0.8rem;">
+                📊 Chọn nguồn chỉ số tài chính:
+              </label>
+              <div style="display: flex; gap: 1.5rem; margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input
+                    type="radio"
+                    v-model="pdDataSource"
+                    value="from-predict"
+                    style="width: 18px; height: 18px; cursor: pointer;"
+                  />
+                  <span style="font-size: 0.95rem; font-weight: 600;">Lấy chỉ số từ Tab Dự Báo</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input
+                    type="radio"
+                    v-model="pdDataSource"
+                    value="new-file"
+                    style="width: 18px; height: 18px; cursor: pointer;"
+                  />
+                  <span style="font-size: 0.95rem; font-weight: 600;">Tải lên File mới để phân tích</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Upload file mới (nếu chọn "new-file") -->
+            <div v-if="pdDataSource === 'new-file'" style="margin: 1.5rem 0;">
+              <div class="upload-area" @click="$refs.pdXlsxFileInput.click()" style="padding: 1rem; min-height: 80px;">
+                <div class="upload-icon" style="font-size: 1.5rem;">📊</div>
+                <p class="upload-text">{{ pdXlsxFileName || 'Tải lên file XLSX của doanh nghiệp' }}</p>
+                <p class="upload-hint" style="font-size: 0.7rem;">
+                  File XLSX phải có 3 sheets: CDKT, BCTN, LCTT
+                </p>
+              </div>
+              <input
+                ref="pdXlsxFileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handlePdXlsxFile"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Nút phân tích -->
+            <div v-if="pdDataSource" style="margin: 1.5rem 0;">
+              <button
+                @click="analyzePdWithIndustry"
+                class="btn btn-accent"
+                :disabled="isAnalyzingPdIndustry || (pdDataSource === 'from-predict' && !indicatorsDict) || (pdDataSource === 'new-file' && !pdXlsxFile)"
+                style="width: 100%; padding: 1rem; font-size: 1.05rem;"
+              >
+                {{ isAnalyzingPdIndustry ? '⏳ Đang phân tích...' : '🎯 Phân tích PD kết hợp Ngành nghề' }}
+              </button>
+              <p v-if="pdDataSource === 'from-predict' && !indicatorsDict" style="color: #ff6b9d; text-align: center; margin-top: 0.5rem; font-size: 0.85rem;">
+                ⚠️ Vui lòng tải file và tính toán chỉ số ở Tab "Dự Báo PD" trước
+              </p>
+            </div>
+
+            <!-- Hiển thị 14 chỉ số (nhỏ gọn) -->
+            <div v-if="pdAnalysisIndicators" style="margin: 2rem 0;">
+              <h3 style="color: #9C27B0; font-size: 1.1rem; margin-bottom: 1rem; text-align: center;">
+                📈 14 Chỉ số Tài chính đã tính toán
+              </h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem;">
+                <div v-for="(value, key) in pdAnalysisIndicators" :key="key"
+                     style="background: linear-gradient(135deg, rgba(156, 39, 176, 0.1) 0%, rgba(233, 216, 253, 0.2) 100%);
+                            padding: 0.6rem; border-radius: 8px; border: 1px solid rgba(156, 39, 176, 0.2);">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: #9C27B0; margin-bottom: 0.2rem;">{{ key }}</div>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #4A4A4A;">{{ value.toFixed(4) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hiển thị biểu đồ -->
+            <div v-if="pdAnalysisCharts" class="charts-section" style="margin-top: 2rem;">
+              <h3 style="color: #9C27B0; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;">
+                📊 Biểu đồ Phân tích Chỉ số
+              </h3>
+              <div id="pd-industry-charts-container" style="width: 100%; min-height: 400px;"></div>
+            </div>
+
+            <!-- Hiển thị phân tích từ Gemini -->
+            <div v-if="pdAnalysisResult" class="deep-analysis-section" style="margin-top: 2rem;">
+              <div class="analysis-box" style="border: 3px solid #9C27B0;">
+                <h3 style="color: #9C27B0; font-size: 1.3rem; margin-bottom: 1.5rem; text-align: center; font-weight: 900;">
+                  🎯 Phân tích PD kết hợp Ngành nghề
+                </h3>
+                <div class="analysis-content" style="font-size: 0.95rem; line-height: 1.7; font-weight: 600; white-space: pre-wrap;">
+                  {{ pdAnalysisResult }}
+                </div>
               </div>
             </div>
           </div>
@@ -489,6 +672,19 @@ export default {
     const briefAnalysis = ref('')
     const isDeepAnalyzing = ref(false)
     const deepAnalysisResult = ref('')
+
+    // Dashboard Sub-tab State
+    const dashboardSubTab = ref('industry')
+
+    // PD + Industry Analysis - NEW FEATURE
+    const pdIndustrySelected = ref('')
+    const pdDataSource = ref('')
+    const pdXlsxFile = ref(null)
+    const pdXlsxFileName = ref('')
+    const isAnalyzingPdIndustry = ref(false)
+    const pdAnalysisIndicators = ref(null)
+    const pdAnalysisCharts = ref(null)
+    const pdAnalysisResult = ref('')
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -858,6 +1054,114 @@ export default {
       }
     }
 
+    // NEW: Handle PD XLSX file upload
+    const handlePdXlsxFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        pdXlsxFile.value = file
+        pdXlsxFileName.value = file.name
+      }
+    }
+
+    // NEW: Analyze PD with Industry
+    const analyzePdWithIndustry = async () => {
+      if (!pdIndustrySelected.value || !pdDataSource.value) return
+
+      isAnalyzingPdIndustry.value = true
+      pdAnalysisIndicators.value = null
+      pdAnalysisCharts.value = null
+      pdAnalysisResult.value = ''
+
+      try {
+        let indicatorsToUse = null
+
+        // Option 1: Lấy từ Tab Dự báo
+        if (pdDataSource.value === 'from-predict') {
+          if (!indicatorsDict.value) {
+            alert('⚠️ Vui lòng tải file và tính toán chỉ số ở Tab "Dự Báo PD" trước')
+            return
+          }
+          indicatorsToUse = indicatorsDict.value
+        }
+        // Option 2: Tải file mới
+        else if (pdDataSource.value === 'new-file') {
+          if (!pdXlsxFile.value) {
+            alert('⚠️ Vui lòng tải lên file XLSX')
+            return
+          }
+
+          // Tính toán 14 chỉ số từ file mới
+          const formData = new FormData()
+          formData.append('file', pdXlsxFile.value)
+
+          const calcResponse = await axios.post(`${API_BASE}/predict-from-xlsx`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+
+          if (calcResponse.data.status === 'success') {
+            indicatorsToUse = calcResponse.data.indicators_dict
+          } else {
+            alert('❌ Lỗi khi tính toán chỉ số từ file XLSX')
+            return
+          }
+        }
+
+        // Gọi API phân tích PD kết hợp ngành
+        const requestData = {
+          indicators_dict: indicatorsToUse,
+          industry: pdIndustrySelected.value,
+          industry_name: getIndustryName(pdIndustrySelected.value)
+        }
+
+        const response = await axios.post(`${API_BASE}/analyze-pd-with-industry`, requestData)
+
+        if (response.data.status === 'success') {
+          pdAnalysisIndicators.value = indicatorsToUse
+          pdAnalysisResult.value = response.data.analysis
+          pdAnalysisCharts.value = response.data.charts_data
+
+          // Render charts
+          await nextTick()
+          renderPdIndustryCharts(response.data.charts_data)
+
+          alert('✅ Phân tích PD kết hợp ngành nghề thành công!')
+
+          // Scroll to results
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi phân tích: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isAnalyzingPdIndustry.value = false
+      }
+    }
+
+    // NEW: Render PD Industry Charts
+    const renderPdIndustryCharts = (chartsDataArray) => {
+      const container = document.getElementById('pd-industry-charts-container')
+      if (!container) return
+
+      // Clear container
+      container.innerHTML = ''
+
+      // Tạo nhiều biểu đồ ECharts
+      chartsDataArray.forEach((chartConfig, index) => {
+        const chartDiv = document.createElement('div')
+        chartDiv.id = `pd-chart-${index}`
+        chartDiv.style.width = '100%'
+        chartDiv.style.height = '400px'
+        chartDiv.style.marginBottom = '2rem'
+        container.appendChild(chartDiv)
+
+        const chartInstance = echarts.init(chartDiv)
+        chartInstance.setOption(chartConfig)
+      })
+    }
+
     return {
       // ✅ TAB STATE
       activeTab,
@@ -891,6 +1195,17 @@ export default {
       briefAnalysis,
       isDeepAnalyzing,
       deepAnalysisResult,
+      // Dashboard Sub-tab
+      dashboardSubTab,
+      // PD + Industry - NEW
+      pdIndustrySelected,
+      pdDataSource,
+      pdXlsxFile,
+      pdXlsxFileName,
+      isAnalyzingPdIndustry,
+      pdAnalysisIndicators,
+      pdAnalysisCharts,
+      pdAnalysisResult,
       // Methods
       handleTrainFile,
       trainModel,
@@ -908,7 +1223,10 @@ export default {
       // Dashboard - NEW Methods
       fetchIndustryData,
       showCharts,
-      deepAnalyze
+      deepAnalyze,
+      // PD + Industry - NEW Methods
+      handlePdXlsxFile,
+      analyzePdWithIndustry
     }
   }
 }

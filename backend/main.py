@@ -495,6 +495,151 @@ async def deep_analyze_industry_endpoint(request_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích sâu: {str(e)}")
 
 
+@app.post("/analyze-pd-with-industry")
+async def analyze_pd_with_industry(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích PD kết hợp với ngành nghề
+
+    Args:
+        request_data: Dict chứa indicators_dict, industry, và industry_name
+
+    Returns:
+        Dict chứa phân tích chuyên sâu và charts_data
+    """
+    try:
+        indicators_dict = request_data.get('indicators_dict', {})
+        industry = request_data.get('industry', '')
+        industry_name = request_data.get('industry_name', '')
+
+        if not indicators_dict or not industry or not industry_name:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin indicators_dict, industry hoặc industry_name"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Phân tích PD kết hợp
+        analysis = analyzer.analyze_pd_with_industry(indicators_dict, industry, industry_name)
+
+        # Tạo biểu đồ từ 14 chỉ số
+        charts_data = []
+
+        # Biểu đồ 1: Radar chart cho 4 nhóm chỉ số chính
+        charts_data.append({
+            "title": {"text": "Tổng quan 14 Chỉ số Tài chính", "left": "center"},
+            "tooltip": {},
+            "radar": {
+                "indicator": [
+                    {"name": "Sinh lời (X1-X4)", "max": 1},
+                    {"name": "Đòn bẩy (X5-X6)", "max": 5},
+                    {"name": "Thanh toán (X7-X8)", "max": 5},
+                    {"name": "Hiệu quả (X9-X14)", "max": 10}
+                ]
+            },
+            "series": [{
+                "type": "radar",
+                "data": [{
+                    "value": [
+                        (indicators_dict.get('X_1', 0) + indicators_dict.get('X_2', 0) +
+                         indicators_dict.get('X_3', 0) + indicators_dict.get('X_4', 0)) / 4,
+                        (indicators_dict.get('X_5', 0) + indicators_dict.get('X_6', 0)) / 2,
+                        (indicators_dict.get('X_7', 0) + indicators_dict.get('X_8', 0)) / 2,
+                        (indicators_dict.get('X_9', 0) + indicators_dict.get('X_10', 0) +
+                         indicators_dict.get('X_11', 0) + indicators_dict.get('X_12', 0) +
+                         indicators_dict.get('X_14', 0)) / 5
+                    ],
+                    "name": "Chỉ số doanh nghiệp",
+                    "areaStyle": {"color": "rgba(255, 107, 157, 0.3)"}
+                }]
+            }]
+        })
+
+        # Biểu đồ 2: Bar chart so sánh chỉ số sinh lời
+        charts_data.append({
+            "title": {"text": "Chỉ số Sinh lời (X1-X4)", "left": "center"},
+            "tooltip": {"trigger": "axis"},
+            "xAxis": {
+                "type": "category",
+                "data": ["Biên LN gộp (X1)", "Biên LN trước thuế (X2)", "ROA (X3)", "ROE (X4)"]
+            },
+            "yAxis": {"type": "value"},
+            "series": [{
+                "data": [
+                    indicators_dict.get('X_1', 0),
+                    indicators_dict.get('X_2', 0),
+                    indicators_dict.get('X_3', 0),
+                    indicators_dict.get('X_4', 0)
+                ],
+                "type": "bar",
+                "itemStyle": {"color": "#10B981"},
+                "label": {"show": True, "position": "top", "formatter": "{c}"}
+            }]
+        })
+
+        # Biểu đồ 3: Bar chart chỉ số thanh toán & đòn bẩy
+        charts_data.append({
+            "title": {"text": "Thanh toán & Đòn bẩy (X5-X8)", "left": "center"},
+            "tooltip": {"trigger": "axis"},
+            "xAxis": {
+                "type": "category",
+                "data": ["Nợ/TS (X5)", "Nợ/VCSH (X6)", "TT hiện hành (X7)", "TT nhanh (X8)"]
+            },
+            "yAxis": {"type": "value"},
+            "series": [{
+                "data": [
+                    indicators_dict.get('X_5', 0),
+                    indicators_dict.get('X_6', 0),
+                    indicators_dict.get('X_7', 0),
+                    indicators_dict.get('X_8', 0)
+                ],
+                "type": "bar",
+                "itemStyle": {"color": "#3B82F6"},
+                "label": {"show": True, "position": "top", "formatter": "{c}"}
+            }]
+        })
+
+        # Biểu đồ 4: Bar chart hiệu quả hoạt động
+        charts_data.append({
+            "title": {"text": "Hiệu quả Hoạt động (X9-X14)", "left": "center"},
+            "tooltip": {"trigger": "axis"},
+            "xAxis": {
+                "type": "category",
+                "data": ["Trả lãi (X9)", "Trả nợ gốc (X10)", "Tạo tiền (X11)",
+                         "Vòng quay HTK (X12)", "Kỳ thu tiền (X13)", "Hiệu suất TS (X14)"]
+            },
+            "yAxis": {"type": "value"},
+            "series": [{
+                "data": [
+                    indicators_dict.get('X_9', 0),
+                    indicators_dict.get('X_10', 0),
+                    indicators_dict.get('X_11', 0),
+                    indicators_dict.get('X_12', 0),
+                    indicators_dict.get('X_13', 0),
+                    indicators_dict.get('X_14', 0)
+                ],
+                "type": "bar",
+                "itemStyle": {"color": "#9C27B0"},
+                "label": {"show": True, "position": "top", "formatter": "{c}"}
+            }]
+        })
+
+        return {
+            "status": "success",
+            "analysis": analysis,
+            "charts_data": charts_data
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích PD kết hợp: {str(e)}")
+
+
 @app.get("/model-info")
 async def get_model_info():
     """
