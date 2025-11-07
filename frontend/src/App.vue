@@ -476,6 +476,12 @@
                   {{ deepAnalysisResult }}
                 </div>
               </div>
+
+              <!-- Chatbot Trigger cho sub-tab Phân tích Ngành -->
+              <div v-if="!showDashboardChatbot" class="chatbot-trigger" style="margin-top: 1.5rem;">
+                <div class="pointer-hand">👉</div>
+                <div class="trigger-text" @click="openDashboardChatbot">Hỏi thêm chi tiết về phân tích ngành tại đây...</div>
+              </div>
             </div>
           </div>
 
@@ -642,7 +648,55 @@
                   {{ pdAnalysisResult }}
                 </div>
               </div>
+
+              <!-- Chatbot Trigger cho sub-tab PD chuyên sâu -->
+              <div v-if="!showDashboardChatbot" class="chatbot-trigger" style="margin-top: 1.5rem;">
+                <div class="pointer-hand">👉</div>
+                <div class="trigger-text" @click="openDashboardChatbot">Hỏi thêm chi tiết về phân tích PD kết hợp ngành tại đây...</div>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Chatbot Component cho Dashboard -->
+        <div v-if="showDashboardChatbot" class="chatbot-container">
+          <div class="chatbot-header">
+            <div class="chatbot-title">
+              <span class="chatbot-icon">🤖</span>
+              <span>Trợ lý ảo Agribank - Dashboard</span>
+            </div>
+            <button @click="closeDashboardChatbot" class="chatbot-close">✕</button>
+          </div>
+          <div class="chatbot-messages">
+            <div v-if="dashboardChatMessages.length === 0" class="chatbot-welcome">
+              <p>👋 Xin chào! Tôi là Trợ lý ảo Agribank.</p>
+              <p>Bạn có thể hỏi thêm về phân tích Dashboard vừa rồi.</p>
+            </div>
+            <div
+              v-for="(message, index) in dashboardChatMessages"
+              :key="index"
+              class="chat-message"
+              :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+            >
+              {{ message.content }}
+            </div>
+            <div v-if="isDashboardChatLoading" class="chat-loading">
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+            </div>
+          </div>
+          <div class="chatbot-input">
+            <input
+              v-model="dashboardChatInput"
+              @keyup.enter="sendDashboardChatMessage"
+              type="text"
+              placeholder="Nhập câu hỏi của bạn..."
+              class="chat-input-field"
+            />
+            <button @click="sendDashboardChatMessage" class="chat-send-button" :disabled="!dashboardChatInput.trim() || isDashboardChatLoading">
+              ➤
+            </button>
           </div>
         </div>
       </div>
@@ -716,11 +770,17 @@ export default {
     const showScrollTop = ref(false)
     const scrollTopPosition = ref(100)
 
-    // Chatbot
+    // Chatbot - Tab Dự báo PD
     const showChatbot = ref(false)
     const chatMessages = ref([])
     const chatInput = ref('')
     const isChatLoading = ref(false)
+
+    // Chatbot - Dashboard Tài chính
+    const showDashboardChatbot = ref(false)
+    const dashboardChatMessages = ref([])
+    const dashboardChatInput = ref('')
+    const isDashboardChatLoading = ref(false)
 
     // Training
     const trainFile = ref(null)
@@ -1249,7 +1309,7 @@ export default {
       }, 100)
     }
 
-    // Chatbot functionality
+    // Chatbot functionality - Tab Dự báo PD
     const openChatbot = () => {
       showChatbot.value = true
     }
@@ -1295,6 +1355,68 @@ export default {
       }
     }
 
+    // Chatbot functionality - Dashboard Tài chính
+    const openDashboardChatbot = () => {
+      showDashboardChatbot.value = true
+    }
+
+    const closeDashboardChatbot = () => {
+      showDashboardChatbot.value = false
+    }
+
+    const sendDashboardChatMessage = async () => {
+      if (!dashboardChatInput.value.trim() || isDashboardChatLoading.value) return
+
+      const userMessage = dashboardChatInput.value
+      dashboardChatMessages.value.push({
+        role: 'user',
+        content: userMessage
+      })
+      dashboardChatInput.value = ''
+      isDashboardChatLoading.value = true
+
+      try {
+        // Xác định context dựa trên sub-tab hiện tại
+        let context = ''
+        let indicators = {}
+        let prediction = {}
+
+        if (dashboardSubTab.value === 'industry') {
+          // Sub-tab Phân tích Ngành
+          context = deepAnalysisResult.value || briefAnalysis.value || 'Chưa có phân tích ngành'
+          indicators = { industry: selectedIndustry.value, industry_name: getIndustryName(selectedIndustry.value) }
+        } else if (dashboardSubTab.value === 'pd-industry') {
+          // Sub-tab PD chuyên sâu
+          context = pdAnalysisResult.value || 'Chưa có phân tích PD kết hợp ngành'
+          indicators = pdAnalysisIndicators.value || {}
+          prediction = { industry: pdIndustrySelected.value, industry_name: getIndustryName(pdIndustrySelected.value) }
+        }
+
+        const requestData = {
+          question: userMessage,
+          context: context,
+          indicators: indicators,
+          prediction: prediction
+        }
+
+        const response = await axios.post(`${API_BASE}/chat-assistant`, requestData)
+
+        if (response.data.status === 'success') {
+          dashboardChatMessages.value.push({
+            role: 'assistant',
+            content: response.data.answer
+          })
+        }
+      } catch (error) {
+        dashboardChatMessages.value.push({
+          role: 'assistant',
+          content: '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.'
+        })
+      } finally {
+        isDashboardChatLoading.value = false
+      }
+    }
+
     // Mounted - Add scroll listener
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', handleScroll)
@@ -1307,7 +1429,7 @@ export default {
       showScrollTop,
       scrollTopPosition,
       scrollToTop,
-      // Chatbot
+      // Chatbot - Tab Dự báo PD
       showChatbot,
       chatMessages,
       chatInput,
@@ -1315,6 +1437,14 @@ export default {
       openChatbot,
       closeChatbot,
       sendChatMessage,
+      // Chatbot - Dashboard
+      showDashboardChatbot,
+      dashboardChatMessages,
+      dashboardChatInput,
+      isDashboardChatLoading,
+      openDashboardChatbot,
+      closeDashboardChatbot,
+      sendDashboardChatMessage,
       // Training
       trainFile,
       trainFileName,
