@@ -670,6 +670,55 @@ async def get_model_info():
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy thông tin mô hình: {str(e)}")
 
 
+@app.post("/chat-assistant")
+async def chat_assistant(request_data: Dict[str, Any]):
+    """
+    Endpoint cho chatbot "Trợ lý ảo Agribank" - trả lời câu hỏi dựa trên phân tích
+
+    Args:
+        request_data: Dict chứa question, context (phân tích trước đó), indicators, prediction
+
+    Returns:
+        Dict chứa câu trả lời từ AI
+    """
+    try:
+        question = request_data.get('question', '')
+        context = request_data.get('context', '')
+        indicators = request_data.get('indicators', None)
+        prediction = request_data.get('prediction', None)
+
+        if not question:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu câu hỏi (question)"
+            )
+
+        if not context:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu nội dung phân tích (context)"
+            )
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Trả lời câu hỏi
+        answer = analyzer.chat_with_analysis(question, context, indicators, prediction)
+
+        return {
+            "status": "success",
+            "answer": answer
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý câu hỏi: {str(e)}")
+
+
 # ================================================================================================
 # MAIN
 # ================================================================================================

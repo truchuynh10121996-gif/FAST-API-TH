@@ -631,6 +631,59 @@ Hãy trả lời bằng tiếng Việt, chuyên nghiệp và chi tiết.
                 "charts": []
             }
 
+    def chat_with_analysis(self, question: str, context: str, indicators: Dict[str, float] = None, prediction: Dict[str, Any] = None) -> str:
+        """
+        Trả lời câu hỏi của người dùng dựa trên phân tích đã có
+
+        Args:
+            question: Câu hỏi của người dùng
+            context: Nội dung phân tích trước đó từ Gemini
+            indicators: 14 chỉ số tài chính (optional)
+            prediction: Kết quả dự báo PD (optional)
+
+        Returns:
+            Câu trả lời từ Gemini
+        """
+        # Tạo context string cho indicators và prediction nếu có
+        additional_context = ""
+
+        if indicators:
+            indicators_str = "\n".join([f"- {k}: {v:.4f}" for k, v in indicators.items()])
+            additional_context += f"\n\n**14 CHỈ SỐ TÀI CHÍNH:**\n{indicators_str}"
+
+        if prediction:
+            pd_stacking = prediction.get('pd_stacking', 0) * 100
+            prediction_label = prediction.get('prediction_label', 'N/A')
+            additional_context += f"\n\n**KẾT QUẢ DỰ BÁO:**\n- PD (Stacking): {pd_stacking:.2f}%\n- Dự đoán: {prediction_label}"
+
+        prompt = f"""
+Bạn là Trợ lý ảo Agribank - một chuyên gia phân tích tín dụng thân thiện và hiểu biết.
+
+**PHÂN TÍCH TRƯỚC ĐÓ:**
+{context}
+{additional_context}
+
+**CÂU HỎI CỦA NGƯỜI DÙNG:**
+{question}
+
+**HƯỚNG DẪN TRẢ LỜI:**
+- Trả lời ngắn gọn, súc tích (100-200 từ)
+- Dựa trên phân tích đã có ở trên
+- Giải thích rõ ràng, dễ hiểu
+- Nếu câu hỏi về chỉ số cụ thể, hãy giải thích ý nghĩa và tình trạng của chỉ số đó
+- Nếu câu hỏi về khuyến nghị, hãy đưa ra lời khuyên cụ thể
+- Giọng điệu thân thiện, chuyên nghiệp
+- Sử dụng tiếng Việt
+
+**LƯU Ý:** Chỉ trả lời dựa trên thông tin có sẵn. Nếu không đủ thông tin, hãy nói rõ.
+"""
+
+        try:
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"❌ Xin lỗi, tôi gặp lỗi khi xử lý câu hỏi của bạn: {str(e)}"
+
 
 # Khởi tạo instance global
 gemini_analyzer = None
