@@ -178,6 +178,92 @@ Hãy trình bày rõ ràng, dễ hiểu, có cấu trúc. Tối đa 500 từ.
 
         return prompt
 
+    def analyze_industry(self, industry: str, industry_name: str) -> Dict[str, Any]:
+        """
+        Phân tích tình hình ngành nghề và tác động đến quyết định cho vay
+
+        Args:
+            industry: Mã ngành (e.g., 'agriculture', 'finance')
+            industry_name: Tên ngành đầy đủ
+
+        Returns:
+            Dict chứa phân tích và dữ liệu charts (nếu có)
+        """
+        prompt = f"""
+Bạn là một chuyên gia kinh tế và phân tích ngành nghề của Agribank với hơn 20 năm kinh nghiệm.
+
+Hãy phân tích chi tiết về ngành "{industry_name}" tại Việt Nam và tác động của nó đến quyết định cho vay của ngân hàng.
+
+**YÊU CẦU PHÂN TÍCH:**
+
+1. **Tổng quan ngành** (150 từ):
+   - Tình hình hiện tại của ngành
+   - Xu hướng phát triển gần đây (2023-2024)
+   - Quy mô thị trường và tốc độ tăng trưởng
+   - Các doanh nghiệp hàng đầu trong ngành
+
+2. **Phân tích kinh tế vĩ mô** (150 từ):
+   - Các chỉ số kinh tế quan trọng ảnh hưởng đến ngành
+   - Chính sách của Chính phủ/Ngân hàng Nhà nước liên quan
+   - Tác động của kinh tế toàn cầu
+   - Lạm phát, lãi suất, tỷ giá ảnh hưởng như thế nào
+
+3. **Cơ hội và Rủi ro** (150 từ):
+   - Cơ hội: Những yếu tố tích cực cho ngành
+   - Rủi ro: Những thách thức và nguy cơ tiềm ẩn
+   - Đánh giá mức độ rủi ro của ngành (Thấp/Trung bình/Cao)
+
+4. **Tác động đến quyết định cho vay** (150 từ):
+   - Ngành này có phù hợp để cho vay không?
+   - Các tiêu chí đánh giá khi cho vay doanh nghiệp trong ngành này
+   - Mức độ rủi ro tín dụng của ngành (dựa trên NPL, tỷ lệ nợ xấu)
+   - Khuyến nghị về hạn mức, lãi suất, và thời hạn vay phù hợp
+
+5. **Dự báo và Khuyến nghị** (100 từ):
+   - Triển vọng ngành trong 1-2 năm tới
+   - Khuyến nghị chiến lược cho ngân hàng khi cho vay ngành này
+   - Các điểm cần đặc biệt lưu ý
+
+**LƯU Ý:**
+- Sử dụng số liệu cụ thể, tham khảo các nguồn uy tín (GSO, World Bank, IMF, các báo cáo ngành...)
+- Phân tích phải khách quan, dựa trên dữ liệu thực tế
+- Trình bày rõ ràng, có cấu trúc, dễ hiểu
+- Tổng số từ: khoảng 700 từ
+
+Hãy trả lời bằng tiếng Việt, chuyên nghiệp và chi tiết.
+"""
+
+        try:
+            response = self.model.generate_content(prompt)
+            analysis = response.text
+
+            # Tạo dữ liệu charts giả (trong thực tế có thể lấy từ API thực)
+            charts = [
+                {
+                    "title": f"Tăng trưởng GDP ngành {industry_name} (2020-2024)",
+                    "description": "Biểu đồ thể hiện tốc độ tăng trưởng GDP của ngành qua các năm"
+                },
+                {
+                    "title": f"Tỷ lệ nợ xấu ngành {industry_name}",
+                    "description": "Biểu đồ so sánh tỷ lệ NPL của ngành với trung bình toàn hệ thống"
+                },
+                {
+                    "title": f"Doanh thu và Lợi nhuận ngành {industry_name}",
+                    "description": "Xu hướng doanh thu và lợi nhuận của các doanh nghiệp trong ngành"
+                }
+            ]
+
+            return {
+                "analysis": analysis,
+                "charts": charts
+            }
+
+        except Exception as e:
+            return {
+                "analysis": f"❌ Lỗi khi phân tích ngành: {str(e)}",
+                "charts": []
+            }
+
 
 # Khởi tạo instance global
 gemini_analyzer = None
