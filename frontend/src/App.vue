@@ -3,6 +3,16 @@
     <!-- Khoảng trống 1cm trước header -->
     <div class="header-spacer"></div>
 
+    <!-- Nút Lên đầu trang -->
+    <button
+      v-show="showScrollTop"
+      @click="scrollToTop"
+      class="scroll-to-top"
+      :style="{ top: scrollTopPosition + 'px' }"
+    >
+      ↑
+    </button>
+
     <!-- Header mới với tông màu hồng lung linh - Chỉ thanh hồng -->
     <header class="header"></header>
 
@@ -55,6 +65,12 @@
       <div v-if="activeTab === 'predict'" class="tab-content">
         <div class="card">
           <h2 class="card-title">🔮 Dự báo PD & Phân tích AI cho Hồ sơ mới</h2>
+
+          <!-- Ghi chú hướng dẫn -->
+          <div class="info-note">
+            <span class="note-icon">📝</span>
+            <span class="note-text">Tải hồ sơ doanh nghiệp gồm 3 phần Cân đối kế toán, Báo cáo thu nhập, Lưu chuyển tiền tệ và Bắt đầu Dự báo bằng mô hình Stacking Ensemble</span>
+          </div>
 
         <!-- Upload XLSX File -->
         <div style="margin-bottom: 2rem;">
@@ -229,6 +245,17 @@
 
               <div class="analysis-content">{{ geminiAnalysis }}</div>
             </div>
+
+            <!-- Nút Phân tích sâu kết hợp Bối cảnh ngành -->
+            <div style="margin-top: 2rem; text-align: center;">
+              <button
+                @click="goToPdIndustryTab"
+                class="btn btn-accent"
+                style="padding: 0.8rem 2rem; font-size: 1rem;"
+              >
+                🎯 Phân tích sâu kết hợp Bối cảnh ngành
+              </button>
+            </div>
           </div>
 
           <!-- Export Report Button -->
@@ -242,7 +269,55 @@
               {{ isExporting ? '⏳ Đang xuất báo cáo...' : '📄 Xuất Báo cáo Word' }}
             </button>
           </div>
+
+          <!-- Chatbot Trigger - Hiện sau khi có phân tích -->
+          <div v-if="geminiAnalysis && !showChatbot" class="chatbot-trigger">
+            <div class="pointer-hand">👉</div>
+            <div class="trigger-text" @click="openChatbot">Hỏi thêm chi tiết tại đây...</div>
+          </div>
         </div>
+        </div>
+      </div>
+
+      <!-- Chatbot Component -->
+      <div v-if="showChatbot" class="chatbot-container">
+        <div class="chatbot-header">
+          <div class="chatbot-title">
+            <span class="chatbot-icon">🤖</span>
+            <span>Trợ lý ảo Agribank</span>
+          </div>
+          <button @click="closeChatbot" class="chatbot-close">✕</button>
+        </div>
+        <div class="chatbot-messages">
+          <div v-if="chatMessages.length === 0" class="chatbot-welcome">
+            <p>👋 Xin chào! Tôi là Trợ lý ảo Agribank.</p>
+            <p>Bạn có thể hỏi thêm về phân tích vừa rồi.</p>
+          </div>
+          <div
+            v-for="(message, index) in chatMessages"
+            :key="index"
+            class="chat-message"
+            :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+          >
+            {{ message.content }}
+          </div>
+          <div v-if="isChatLoading" class="chat-loading">
+            <span class="loading-dot"></span>
+            <span class="loading-dot"></span>
+            <span class="loading-dot"></span>
+          </div>
+        </div>
+        <div class="chatbot-input">
+          <input
+            v-model="chatInput"
+            @keyup.enter="sendChatMessage"
+            type="text"
+            placeholder="Nhập câu hỏi của bạn..."
+            class="chat-input-field"
+          />
+          <button @click="sendChatMessage" class="chat-send-button" :disabled="!chatInput.trim() || isChatLoading">
+            ➤
+          </button>
         </div>
       </div>
 
@@ -637,6 +712,16 @@ export default {
     // ✅ TAB STATE - Mặc định là 'predict'
     const activeTab = ref('predict')
 
+    // Scroll to top button
+    const showScrollTop = ref(false)
+    const scrollTopPosition = ref(100)
+
+    // Chatbot
+    const showChatbot = ref(false)
+    const chatMessages = ref([])
+    const chatInput = ref('')
+    const isChatLoading = ref(false)
+
     // Training
     const trainFile = ref(null)
     const trainFileName = ref('')
@@ -756,11 +841,6 @@ export default {
           predictionResult.value = response.data.prediction
 
           alert('✅ Tính toán 14 chỉ số và dự báo PD thành công!')
-
-          // Scroll to results
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          }, 100)
         }
       } catch (error) {
         alert('❌ Lỗi khi xử lý file XLSX: ' + (error.response?.data?.detail || error.message))
@@ -786,11 +866,6 @@ export default {
 
         if (response.data.status === 'success') {
           geminiAnalysis.value = response.data.analysis
-
-          // Scroll to analysis
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          }, 100)
         }
       } catch (error) {
         alert('❌ Lỗi khi phân tích bằng Gemini: ' + (error.response?.data?.detail || error.message))
@@ -989,11 +1064,6 @@ export default {
           // Render charts using ECharts
           await nextTick()
           renderCharts(response.data.charts_data)
-
-          // Scroll to charts
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          }, 100)
         }
       } catch (error) {
         alert('❌ Lỗi khi tạo biểu đồ: ' + (error.response?.data?.detail || error.message))
@@ -1041,11 +1111,6 @@ export default {
 
         if (response.data.status === 'success') {
           deepAnalysisResult.value = response.data.deep_analysis
-
-          // Scroll to deep analysis
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          }, 100)
         }
       } catch (error) {
         alert('❌ Lỗi khi phân tích sâu: ' + (error.response?.data?.detail || error.message))
@@ -1127,11 +1192,6 @@ export default {
           renderPdIndustryCharts(response.data.charts_data)
 
           alert('✅ Phân tích PD kết hợp ngành nghề thành công!')
-
-          // Scroll to results
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          }, 100)
         }
       } catch (error) {
         alert('❌ Lỗi khi phân tích: ' + (error.response?.data?.detail || error.message))
@@ -1162,9 +1222,99 @@ export default {
       })
     }
 
+    // Scroll to top functionality
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+      showScrollTop.value = scrollTop > 300
+
+      // Cập nhật vị trí nút theo chuột
+      scrollTopPosition.value = Math.min(100 + scrollTop * 0.05, window.innerHeight - 100)
+    }
+
+    const scrollToTop = () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+
+    // Navigate to PD Industry Tab
+    const goToPdIndustryTab = () => {
+      activeTab.value = 'dashboard'
+      dashboardSubTab.value = 'pd-industry'
+
+      // Scroll to top
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 100)
+    }
+
+    // Chatbot functionality
+    const openChatbot = () => {
+      showChatbot.value = true
+    }
+
+    const closeChatbot = () => {
+      showChatbot.value = false
+    }
+
+    const sendChatMessage = async () => {
+      if (!chatInput.value.trim() || isChatLoading.value) return
+
+      const userMessage = chatInput.value
+      chatMessages.value.push({
+        role: 'user',
+        content: userMessage
+      })
+      chatInput.value = ''
+      isChatLoading.value = true
+
+      try {
+        const requestData = {
+          question: userMessage,
+          context: geminiAnalysis.value,
+          indicators: indicatorsDict.value,
+          prediction: predictionResult.value
+        }
+
+        const response = await axios.post(`${API_BASE}/chat-assistant`, requestData)
+
+        if (response.data.status === 'success') {
+          chatMessages.value.push({
+            role: 'assistant',
+            content: response.data.answer
+          })
+        }
+      } catch (error) {
+        chatMessages.value.push({
+          role: 'assistant',
+          content: '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.'
+        })
+      } finally {
+        isChatLoading.value = false
+      }
+    }
+
+    // Mounted - Add scroll listener
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll)
+    }
+
     return {
       // ✅ TAB STATE
       activeTab,
+      // Scroll to top
+      showScrollTop,
+      scrollTopPosition,
+      scrollToTop,
+      // Chatbot
+      showChatbot,
+      chatMessages,
+      chatInput,
+      isChatLoading,
+      openChatbot,
+      closeChatbot,
+      sendChatMessage,
       // Training
       trainFile,
       trainFileName,
@@ -1226,7 +1376,9 @@ export default {
       deepAnalyze,
       // PD + Industry - NEW Methods
       handlePdXlsxFile,
-      analyzePdWithIndustry
+      analyzePdWithIndustry,
+      // Navigate
+      goToPdIndustryTab
     }
   }
 }
