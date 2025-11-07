@@ -1,5 +1,8 @@
 <template>
   <div id="app">
+    <!-- Khoảng trống 1cm trước header -->
+    <div class="header-spacer"></div>
+
     <!-- Header mới với tông màu hồng lung linh -->
     <header class="header">
       <div class="logo-container">
@@ -9,8 +12,14 @@
           class="logo"
         />
       </div>
-      <h1 class="app-title">✨ Hệ thống AI Đánh giá Rủi ro Tín dụng Doanh nghiệp ✨</h1>
     </header>
+
+    <!-- Phần tiêu đề đặt dưới header -->
+    <div class="title-section">
+      <h1 class="main-title">CHƯƠNG TRÌNH ĐÁNH GIÁ RỦI RO TÍN DỤNG</h1>
+      <h2 class="sub-title">Dự báo xác suất Vỡ nợ KHDN (PD) & Phân tích AI chuyên sâu</h2>
+      <div class="title-divider"></div>
+    </div>
 
     <!-- ✅ TAB SYSTEM - Thay thế Sidebar -->
     <div class="tabs-container">
@@ -202,7 +211,14 @@
               <h3 style="margin-bottom: 1rem; color: #FF6B9D; font-size: 1.4rem;">
                 🧠 Phân tích & Khuyến nghị từ Gemini AI
               </h3>
-              <div style="white-space: pre-wrap; line-height: 1.8;">{{ geminiAnalysis }}</div>
+
+              <!-- Quyết định cuối cùng CHO VAY / KHÔNG CHO VAY -->
+              <div class="lending-decision" :class="getLendingDecisionClass()">
+                <div class="decision-icon">{{ getLendingDecisionIcon() }}</div>
+                <div class="decision-text">{{ getLendingDecisionText() }}</div>
+              </div>
+
+              <div class="analysis-content">{{ geminiAnalysis }}</div>
             </div>
           </div>
 
@@ -471,6 +487,24 @@ export default {
       return '🔴 Rất cao (CCC-D) - Nguy cơ vỡ nợ cao'
     }
 
+    const getLendingDecisionClass = () => {
+      if (!predictionResult.value) return ''
+      const pdPercent = predictionResult.value.pd_stacking * 100
+      return pdPercent < 10 ? 'decision-approve' : 'decision-reject'
+    }
+
+    const getLendingDecisionIcon = () => {
+      if (!predictionResult.value) return ''
+      const pdPercent = predictionResult.value.pd_stacking * 100
+      return pdPercent < 10 ? '✅' : '❌'
+    }
+
+    const getLendingDecisionText = () => {
+      if (!predictionResult.value) return ''
+      const pdPercent = predictionResult.value.pd_stacking * 100
+      return pdPercent < 10 ? 'CHO VAY' : 'KHÔNG CHO VAY'
+    }
+
     return {
       // ✅ TAB STATE
       activeTab,
@@ -499,7 +533,10 @@ export default {
       analyzeWithGemini,
       exportReport,
       getRiskClass,
-      getRiskLabel
+      getRiskLabel,
+      getLendingDecisionClass,
+      getLendingDecisionIcon,
+      getLendingDecisionText
     }
   }
 }

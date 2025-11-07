@@ -89,7 +89,13 @@ body {
   min-height: 100vh;
 }
 
-/* Header với hiệu ứng lung linh - màu #ff6b9d chủ đạo - ✅ GIẢM XUỐNG ~60px */
+/* Khoảng trống 1cm trước header */
+.header-spacer {
+  height: 1cm;
+  background: transparent;
+}
+
+/* Header với hiệu ứng lung linh - BO TRÒN 2 ĐẦU, RIÊNG BIỆT */
 .header {
   background: linear-gradient(135deg,
     #ff6b9d 0%,
@@ -101,16 +107,18 @@ body {
   );
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
-  /* ✅ GIẢM PADDING: 0.8rem → 0.6rem để header ~60px */
-  padding: 0.6rem 1.2rem;
-  box-shadow: 0 3px 12px rgba(255, 107, 157, 0.3), 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 0.8rem 1.5rem;
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.35), 0 2px 6px rgba(0, 0, 0, 0.12);
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  border-radius: 0 0 10px 10px;
-  margin: 0 0.8rem 0.5rem 0.8rem;
+  justify-content: center;
+  gap: 0.8rem;
+  border-radius: 20px;
+  margin: 0 auto 1.2rem;
+  max-width: 1200px;
+  width: 95%;
 }
 
 .header::before {
@@ -153,17 +161,43 @@ body {
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.18));
 }
 
-.app-title {
-  flex: 1;
+/* Phần tiêu đề đặt dưới header */
+.title-section {
+  max-width: 1200px;
+  width: 95%;
+  margin: 0 auto 1.5rem;
   text-align: center;
-  color: #7d1e52;
-  /* ✅ GIẢM FONT: 1.4rem → 1.2rem */
-  font-size: 1.2rem;
-  font-weight: 800;
-  text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8),
-               0 0 10px rgba(255, 255, 255, 0.5);
-  z-index: 1;
-  letter-spacing: 0.3px;
+}
+
+.main-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #000000;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 0.6rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sub-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #B39DDB;
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.title-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(179, 157, 219, 0.4) 20%,
+    rgba(179, 157, 219, 0.8) 50%,
+    rgba(179, 157, 219, 0.4) 80%,
+    transparent 100%
+  );
+  margin-top: 0.8rem;
 }
 
 /* Container - ✅ GIẢM SCALE */
@@ -439,28 +473,25 @@ body {
   text-shadow: 1px 1px 2px rgba(255, 182, 193, 0.3);
 }
 
-/* Upload Area - ✅ GIẢM SCALE */
+/* Upload Area - VIỀN MẢNH, HIỆU ỨNG ĐẸP, TĂNG CHIỀU NGANG */
 .upload-area {
-  border: 2px solid #ff6b9d;
-  /* ✅ GIẢM BORDER-RADIUS: 18px → 14px */
-  border-radius: 14px;
-  /* ✅ GIẢM PADDING: 2rem 1.5rem → 1.4rem 1rem (~70%) */
-  padding: 1.4rem 1rem;
-  max-width: 800px;
-  /* ✅ GIẢM MIN-HEIGHT: 120px → 100px */
-  min-height: 100px;
+  border: 1.5px solid rgba(255, 107, 157, 0.4);
+  border-radius: 16px;
+  padding: 1.6rem 1.2rem;
+  max-width: 1100px;
+  min-height: 110px;
   margin: 0 auto;
   text-align: center;
   background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 240, 245, 0.95) 100%
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 245, 250, 0.98) 100%
   );
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: visible;
-  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.25),
-              inset 0 0 0 2px #ff9fbf;
+  box-shadow: 0 3px 10px rgba(255, 107, 157, 0.15),
+              inset 0 0 0 1px rgba(255, 159, 191, 0.3);
 }
 
 /* Nội dung upload area */
@@ -472,14 +503,15 @@ body {
 }
 
 .upload-area:hover {
-  border-color: #ff5691;
+  border-color: rgba(255, 107, 157, 0.7);
   background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(255, 235, 243, 0.98) 100%
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 240, 247, 1) 100%
   );
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.35),
-              inset 0 0 0 2px #ff85ad;
+  box-shadow: 0 6px 18px rgba(255, 107, 157, 0.25),
+              0 0 0 3px rgba(255, 182, 193, 0.15),
+              inset 0 0 0 1.5px rgba(255, 107, 157, 0.5);
 }
 
 @keyframes rotate-gradient {
@@ -809,6 +841,7 @@ body {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  text-align: center;
 }
 
 .pd-card::before {
@@ -841,19 +874,20 @@ body {
   font-size: 1.6rem;
 }
 
-/* PD Stacking - Kết quả chính (nổi bật) - THU NHỎ */
+/* PD Stacking - Kết quả chính (nổi bật) - GIẢM KÍCH THƯỚC 30% */
 .pd-stacking-container {
-  max-width: 600px;
+  max-width: 420px;
   margin: 0 auto;
 }
 
 .pd-card-stacking {
-  padding: 2rem;
-  border-radius: 20px;
+  padding: 1.4rem;
+  border-radius: 16px;
   box-shadow: 0 6px 24px rgba(255, 107, 157, 0.4),
               0 3px 12px rgba(0, 0, 0, 0.12);
-  border: 3px solid;
+  border: 2px solid;
   animation: pulse-glow-strong 3s infinite;
+  text-align: center;
 }
 
 @keyframes pulse-glow-strong {
@@ -873,39 +907,43 @@ body {
 }
 
 .pd-label-stacking {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   opacity: 1;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
 }
 
 .pd-value-stacking {
-  font-size: 2.8rem;
+  font-size: 2.2rem;
   font-weight: 900;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
-  margin: 0.4rem 0;
+  margin: 0.3rem 0;
   letter-spacing: 1px;
+  text-align: center;
 }
 
 .pd-status-stacking {
-  margin-top: 0.6rem;
-  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
   font-weight: 700;
   padding: 0.4rem 0.8rem;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.3);
   display: inline-block;
+  text-align: center;
 }
 
 .pd-note {
-  margin-top: 1rem;
-  font-size: 0.8rem;
+  margin-top: 0.8rem;
+  font-size: 0.75rem;
   font-style: italic;
   opacity: 0.85;
-  padding-top: 0.8rem;
+  padding-top: 0.6rem;
   border-top: 2px dashed rgba(255, 255, 255, 0.4);
+  text-align: center;
 }
 
 .pd-card.risk-very-low {
@@ -962,7 +1000,7 @@ body {
   font-weight: 600;
 }
 
-/* Analysis Box - THU NHỎ */
+/* Analysis Box - THU NHỎ & GIẢM KHOẢNG CÁCH DÒNG */
 .analysis-box {
   background: linear-gradient(135deg,
     var(--pastel-purple) 0%,
@@ -973,10 +1011,74 @@ body {
   padding: 1.5rem;
   margin-top: 1.5rem;
   box-shadow: var(--shadow-md);
-  white-space: pre-wrap;
-  line-height: 1.6;
   border: 2px solid rgba(255, 182, 193, 0.3);
   font-size: 0.95rem;
+}
+
+.analysis-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin-top: 1.5rem;
+}
+
+/* Quyết định CHO VAY / KHÔNG CHO VAY */
+.lending-decision {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.2rem 2rem;
+  border-radius: 14px;
+  margin: 1.5rem auto 1rem;
+  max-width: 500px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  animation: pulse-decision 2s ease-in-out infinite;
+  border: 3px solid;
+}
+
+.decision-icon {
+  font-size: 2.5rem;
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+.decision-text {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.decision-approve {
+  background: linear-gradient(135deg, #C8F5DC 0%, #A5D6A7 100%);
+  color: #0D5B2B;
+  border-color: #00a651;
+}
+
+.decision-reject {
+  background: linear-gradient(135deg, #FFE8E8 0%, #FFCCBC 100%);
+  color: #C62828;
+  border-color: #e53935;
+}
+
+@keyframes pulse-decision {
+  0%, 100% {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* Chart Container - THU NHỎ */
