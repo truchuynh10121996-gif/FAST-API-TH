@@ -670,6 +670,73 @@ async def get_model_info():
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy thông tin mô hình: {str(e)}")
 
 
+@app.post("/chat-assistant")
+async def chat_assistant(data: Dict[str, Any]):
+    """
+    Endpoint chatbot - Trợ lý ảo trả lời câu hỏi về phân tích
+
+    Args:
+        data: Dict chứa question, context, indicators, prediction
+
+    Returns:
+        Dict chứa answer từ Gemini
+    """
+    try:
+        question = data.get('question', '')
+        context = data.get('context', '')
+        indicators = data.get('indicators', {})
+        prediction = data.get('prediction', {})
+
+        if not question:
+            raise HTTPException(status_code=400, detail="Thiếu câu hỏi (question)")
+
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Tạo prompt cho chatbot
+        prompt = f"""
+Bạn là Trợ lý ảo chuyên nghiệp của Agribank, chuyên trả lời các câu hỏi về phân tích rủi ro tín dụng.
+
+**BỐI CẢNH PHÂN TÍCH TRƯỚC ĐÓ:**
+{context}
+
+**14 CHỈ SỐ TÀI CHÍNH:**
+{str(indicators)}
+
+**KẾT QUẢ DỰ BÁO PD:**
+{str(prediction)}
+
+**CÂU HỎI CỦA NGƯỜI DÙNG:**
+{question}
+
+**YÊU CẦU TRẢ LỜI:**
+- Trả lời ngắn gọn, chính xác, dễ hiểu (100-200 từ)
+- Dựa trên bối cảnh phân tích và dữ liệu đã có
+- Nếu câu hỏi liên quan đến chỉ số tài chính, giải thích rõ ràng
+- Nếu câu hỏi về khuyến nghị, đưa ra lời khuyên cụ thể
+- Sử dụng tiếng Việt chuyên nghiệp
+
+Hãy trả lời câu hỏi:
+"""
+
+        # Gọi Gemini API
+        response = analyzer.model.generate_content(prompt)
+        answer = response.text
+
+        return {
+            "status": "success",
+            "answer": answer
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý câu hỏi: {str(e)}")
+
+
 # ================================================================================================
 # MAIN
 # ================================================================================================
