@@ -349,6 +349,112 @@ class ExcelProcessor:
 
         return result
 
+    def simulate_scenario_indicators(
+        self,
+        original_indicators: Dict[str, float],
+        revenue_change_pct: float = 0,
+        interest_change_pct: float = 0,
+        roe_change_pct: float = 0,
+        cr_change_pct: float = 0
+    ) -> Dict[str, float]:
+        """
+        Mô phỏng kịch bản biến động kinh tế và tính lại 14 chỉ số
+
+        Args:
+            original_indicators: Dict chứa 14 chỉ số ban đầu (X_1 -> X_14)
+            revenue_change_pct: % thay đổi doanh thu thuần (âm = giảm, dương = tăng)
+            interest_change_pct: % thay đổi chi phí lãi vay (âm = giảm, dương = tăng)
+            roe_change_pct: % thay đổi ROE (âm = giảm, dương = tăng)
+            cr_change_pct: % thay đổi Current Ratio (âm = giảm, dương = tăng)
+
+        Returns:
+            Dict chứa 14 chỉ số sau khi áp dụng kịch bản biến động
+
+        Logic:
+            - Giá trị mới = Giá trị cũ * (1 + %thay đổi)
+            - %thay đổi âm = giảm, dương = tăng
+            - VD: revenue_change_pct = -5 nghĩa là giảm 5%
+                  => Giá trị mới = Giá trị cũ * (1 - 0.05) = Giá trị cũ * 0.95
+        """
+        import copy
+        new_indicators = copy.deepcopy(original_indicators)
+
+        # 1. ẢNH HƯỞNG CỦA DOANH THU THUẦN GIẢM
+        # Doanh thu thuần ảnh hưởng trực tiếp đến: X_1, X_2, X_13, X_14
+        if revenue_change_pct != 0:
+            multiplier = 1 + (revenue_change_pct / 100)
+
+            # X_1: Biên LN gộp = LN gộp / Doanh thu thuần
+            # Giả định: LN gộp giảm theo tỷ lệ tương tự doanh thu
+            new_indicators['X_1'] = original_indicators['X_1'] * multiplier
+
+            # X_2: Biên LN trước thuế = LN trước thuế / Doanh thu thuần
+            # Giả định: LN trước thuế giảm mạnh hơn doanh thu (do chi phí cố định)
+            # Hệ số nhân = multiplier ^ 1.2 (ảnh hưởng mạnh hơn)
+            new_indicators['X_2'] = original_indicators['X_2'] * (multiplier ** 1.2)
+
+            # X_13: Kỳ thu tiền bình quân = 365 / (Doanh thu / BQ Phải thu)
+            # Doanh thu giảm -> Kỳ thu tiền tăng (nghịch đảo)
+            new_indicators['X_13'] = original_indicators['X_13'] / multiplier
+
+            # X_14: Hiệu suất tài sản = Doanh thu / BQ Tài sản
+            # Doanh thu giảm -> X_14 giảm
+            new_indicators['X_14'] = original_indicators['X_14'] * multiplier
+
+            # X_3: ROA = LN trước thuế / BQ Tài sản
+            # Giả định: LN trước thuế giảm theo X_2
+            new_indicators['X_3'] = original_indicators['X_3'] * (multiplier ** 1.2)
+
+        # 2. ẢNH HƯỞNG CỦA CHI PHÍ LÃI VAY TĂNG
+        # Chi phí lãi vay ảnh hưởng đến: X_9, X_10
+        if interest_change_pct != 0:
+            interest_multiplier = 1 + (interest_change_pct / 100)
+
+            # X_9: Khả năng trả lãi = (LNTT + Lãi vay) / Lãi vay
+            # Lãi vay tăng -> X_9 giảm
+            # Công thức đảo: new_X9 = (original_X9 * Lãi_cũ - Lãi_cũ + Lãi_mới) / Lãi_mới
+            # Đơn giản hóa: X_9 mới ≈ X_9 cũ / interest_multiplier (xấp xỉ)
+            new_indicators['X_9'] = original_indicators['X_9'] / (interest_multiplier ** 0.8)
+
+            # X_10: Khả năng trả nợ gốc = (LNTT + Lãi + Khấu hao) / (Lãi + Nợ dài hạn)
+            # Lãi vay tăng -> X_10 giảm (nhưng ít hơn X_9)
+            new_indicators['X_10'] = original_indicators['X_10'] / (interest_multiplier ** 0.5)
+
+        # 3. ẢNH HƯỞNG CỦA ROE GIẢM
+        # ROE (X_4) giảm trực tiếp
+        if roe_change_pct != 0:
+            roe_multiplier = 1 + (roe_change_pct / 100)
+            new_indicators['X_4'] = original_indicators['X_4'] * roe_multiplier
+
+            # ROE giảm cũng ảnh hưởng đến các chỉ số liên quan đến lợi nhuận
+            # X_11: Khả năng tạo tiền / VCSH (gián tiếp ảnh hưởng)
+            new_indicators['X_11'] = original_indicators['X_11'] * (roe_multiplier ** 0.5)
+
+        # 4. ẢNH HƯỞNG CỦA CURRENT RATIO (CR - X_7) GIẢM
+        if cr_change_pct != 0:
+            cr_multiplier = 1 + (cr_change_pct / 100)
+
+            # X_7: CR = Tài sản ngắn hạn / Nợ ngắn hạn
+            new_indicators['X_7'] = original_indicators['X_7'] * cr_multiplier
+
+            # X_8: Khả năng thanh toán nhanh = (TSNH - HTK) / Nợ NH
+            # CR giảm -> X_8 cũng giảm theo
+            new_indicators['X_8'] = original_indicators['X_8'] * cr_multiplier
+
+            # X_12: Vòng quay HTK (gián tiếp ảnh hưởng - HTK tăng nếu CR giảm)
+            # CR giảm có thể do HTK tăng -> Vòng quay giảm
+            new_indicators['X_12'] = original_indicators['X_12'] * (cr_multiplier ** 0.3)
+
+        # 5. CÁC CHỈ SỐ ÍT BỊ ẢNH HƯỞNG (nhưng vẫn có thể biến động nhẹ)
+        # X_5, X_6: Tỷ lệ nợ (ít thay đổi trong ngắn hạn)
+        # Giữ nguyên hoặc biến động rất nhẹ
+
+        # Làm tròn kết quả
+        for key in new_indicators:
+            new_indicators[key] = round(new_indicators[key], 6)
+
+        return new_indicators
+
 
 # Khởi tạo instance global
 excel_processor = ExcelProcessor()
