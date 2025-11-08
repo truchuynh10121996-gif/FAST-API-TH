@@ -1138,7 +1138,7 @@
 </template>
 
 <script>
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import axios from 'axios'
 import * as echarts from 'echarts'
 import RiskChart from './components/RiskChart.vue'
