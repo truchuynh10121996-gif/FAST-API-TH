@@ -744,20 +744,20 @@ async def simulate_scenario(
     scenario_type: str = Form("mild"),
     custom_revenue: float = Form(0),
     custom_interest: float = Form(0),
-    custom_roe: float = Form(0),
-    custom_cr: float = Form(0)
+    custom_cogs: float = Form(0),
+    custom_liquidity: float = Form(0)
 ):
     """
-    Endpoint mô phỏng kịch bản xấu - Tính toán PD trước và sau khi áp dụng kịch bản
+    Endpoint mô phỏng kịch bản xấu - Stress Testing với tính toán dây chuyền hoàn chỉnh (Phương án A)
 
     Args:
         file: File XLSX (nếu tải file mới) - Optional
         indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
         scenario_type: Loại kịch bản ("mild", "moderate", "crisis", "custom")
-        custom_revenue: % thay đổi doanh thu (chỉ dùng khi scenario_type="custom")
-        custom_interest: % thay đổi chi phí lãi vay (chỉ dùng khi scenario_type="custom")
-        custom_roe: % thay đổi ROE (chỉ dùng khi scenario_type="custom")
-        custom_cr: % thay đổi CR (chỉ dùng khi scenario_type="custom")
+        custom_revenue: % thay đổi doanh thu thuần (chỉ dùng khi scenario_type="custom")
+        custom_interest: % thay đổi lãi suất vay (chỉ dùng khi scenario_type="custom")
+        custom_cogs: % thay đổi giá vốn hàng bán (chỉ dùng khi scenario_type="custom")
+        custom_liquidity: % sốc thanh khoản TSNH (chỉ dùng khi scenario_type="custom")
 
     Returns:
         Dict chứa:
@@ -814,35 +814,35 @@ async def simulate_scenario(
                 detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
             )
 
-        # 2. XÁC ĐỊNH % BIẾN ĐỘNG THEO KỊCH BẢN
+        # 2. XÁC ĐỊNH % BIẾN ĐỘNG THEO KỊCH BẢN (PHƯƠNG ÁN A - STRESS TESTING)
         scenario_configs = {
             "mild": {
                 "name": "🟠 Kinh tế giảm nhẹ",
                 "revenue_change": -5,
-                "interest_change": 5,
-                "roe_change": -5,
-                "cr_change": -5
+                "interest_rate_change": 10,
+                "cogs_change": 3,
+                "liquidity_shock": -5
             },
             "moderate": {
                 "name": "🔴 Cú sốc kinh tế trung bình",
-                "revenue_change": -10,
-                "interest_change": 10,
-                "roe_change": -10,
-                "cr_change": -8
+                "revenue_change": -12,
+                "interest_rate_change": 25,
+                "cogs_change": 8,
+                "liquidity_shock": -12
             },
             "crisis": {
                 "name": "⚫ Khủng hoảng",
-                "revenue_change": -20,
-                "interest_change": 15,
-                "roe_change": -20,
-                "cr_change": -12
+                "revenue_change": -25,
+                "interest_rate_change": 40,
+                "cogs_change": 15,
+                "liquidity_shock": -25
             },
             "custom": {
                 "name": "🟡 Tùy chọn biến động",
                 "revenue_change": custom_revenue,
-                "interest_change": custom_interest,
-                "roe_change": custom_roe,
-                "cr_change": custom_cr
+                "interest_rate_change": custom_interest,
+                "cogs_change": custom_cogs,
+                "liquidity_shock": custom_liquidity
             }
         }
 
@@ -855,12 +855,13 @@ async def simulate_scenario(
         scenario = scenario_configs[scenario_type]
 
         # 3. TÍNH 14 CHỈ SỐ SAU KHI ÁP KỊCH BẢN (indicators_after)
-        indicators_after = excel_processor.simulate_scenario_indicators(
+        # Sử dụng PHƯƠNG ÁN A: Stress Testing với tính toán dây chuyền hoàn chỉnh
+        indicators_after = excel_processor.simulate_scenario_full_propagation(
             original_indicators=indicators_before,
             revenue_change_pct=scenario["revenue_change"],
-            interest_change_pct=scenario["interest_change"],
-            roe_change_pct=scenario["roe_change"],
-            cr_change_pct=scenario["cr_change"]
+            interest_rate_change_pct=scenario["interest_rate_change"],
+            cogs_change_pct=scenario["cogs_change"],
+            liquidity_shock_pct=scenario["liquidity_shock"]
         )
 
         # 4. DỰ BÁO PD TRƯỚC VÀ SAU
@@ -912,9 +913,9 @@ async def simulate_scenario(
                 "name": scenario["name"],
                 "changes": {
                     "revenue": scenario["revenue_change"],
-                    "interest": scenario["interest_change"],
-                    "roe": scenario["roe_change"],
-                    "cr": scenario["cr_change"]
+                    "interest": scenario["interest_rate_change"],
+                    "cogs": scenario["cogs_change"],
+                    "liquidity": scenario["liquidity_shock"]
                 }
             },
             "indicators_before": indicators_to_list(indicators_before),

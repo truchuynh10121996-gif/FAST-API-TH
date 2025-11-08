@@ -764,9 +764,9 @@
                 <h4 class="scenario-title">Kinh tế giảm nhẹ</h4>
                 <ul class="scenario-details">
                   <li>Doanh thu thuần <span class="highlight-negative">↓5%</span></li>
-                  <li>Chi phí lãi vay <span class="highlight-negative">↑5%</span></li>
-                  <li>ROE <span class="highlight-negative">↓5%</span></li>
-                  <li>CR <span class="highlight-negative">↓5%</span></li>
+                  <li>Lãi suất vay <span class="highlight-negative">↑10%</span></li>
+                  <li>Giá vốn hàng bán <span class="highlight-negative">↑3%</span></li>
+                  <li>Thanh khoản TSNH <span class="highlight-negative">↓5%</span></li>
                 </ul>
               </div>
 
@@ -778,10 +778,10 @@
                 <div class="scenario-icon">🔴</div>
                 <h4 class="scenario-title">Cú sốc kinh tế trung bình</h4>
                 <ul class="scenario-details">
-                  <li>Doanh thu thuần <span class="highlight-negative">↓10%</span></li>
-                  <li>Chi phí lãi vay <span class="highlight-negative">↑10%</span></li>
-                  <li>ROE <span class="highlight-negative">↓10%</span></li>
-                  <li>CR <span class="highlight-negative">↓8%</span></li>
+                  <li>Doanh thu thuần <span class="highlight-negative">↓12%</span></li>
+                  <li>Lãi suất vay <span class="highlight-negative">↑25%</span></li>
+                  <li>Giá vốn hàng bán <span class="highlight-negative">↑8%</span></li>
+                  <li>Thanh khoản TSNH <span class="highlight-negative">↓12%</span></li>
                 </ul>
               </div>
 
@@ -793,10 +793,10 @@
                 <div class="scenario-icon">⚫</div>
                 <h4 class="scenario-title">Khủng hoảng</h4>
                 <ul class="scenario-details">
-                  <li>Doanh thu thuần <span class="highlight-negative">↓20%</span></li>
-                  <li>Chi phí lãi vay <span class="highlight-negative">↑15%</span></li>
-                  <li>ROE <span class="highlight-negative">↓20%</span></li>
-                  <li>CR <span class="highlight-negative">↓12%</span></li>
+                  <li>Doanh thu thuần <span class="highlight-negative">↓25%</span></li>
+                  <li>Lãi suất vay <span class="highlight-negative">↑40%</span></li>
+                  <li>Giá vốn hàng bán <span class="highlight-negative">↑15%</span></li>
+                  <li>Thanh khoản TSNH <span class="highlight-negative">↓25%</span></li>
                 </ul>
               </div>
 
@@ -820,16 +820,16 @@
                   <input type="number" v-model.number="customRevenue" step="0.1" placeholder="-5" />
                 </div>
                 <div class="input-group">
-                  <label>Chi phí lãi vay (%):</label>
-                  <input type="number" v-model.number="customInterest" step="0.1" placeholder="+5" />
+                  <label>Lãi suất vay (%):</label>
+                  <input type="number" v-model.number="customInterest" step="0.1" placeholder="+10" />
                 </div>
                 <div class="input-group">
-                  <label>ROE (%):</label>
-                  <input type="number" v-model.number="customRoe" step="0.1" placeholder="-5" />
+                  <label>Giá vốn hàng bán (%):</label>
+                  <input type="number" v-model.number="customCogs" step="0.1" placeholder="+3" />
                 </div>
                 <div class="input-group">
-                  <label>Current Ratio (%):</label>
-                  <input type="number" v-model.number="customCr" step="0.1" placeholder="-5" />
+                  <label>Thanh khoản TSNH (%):</label>
+                  <input type="number" v-model.number="customLiquidity" step="0.1" placeholder="-5" />
                 </div>
               </div>
             </div>
@@ -852,9 +852,9 @@
               <h3>{{ scenarioResult.scenario_info.name }}</h3>
               <div class="scenario-changes">
                 <span>Doanh thu: {{ scenarioResult.scenario_info.changes.revenue >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.revenue }}%</span>
-                <span>Lãi vay: {{ scenarioResult.scenario_info.changes.interest >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.interest }}%</span>
-                <span>ROE: {{ scenarioResult.scenario_info.changes.roe >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.roe }}%</span>
-                <span>CR: {{ scenarioResult.scenario_info.changes.cr >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.cr }}%</span>
+                <span>Lãi suất: {{ scenarioResult.scenario_info.changes.interest >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.interest }}%</span>
+                <span>Giá vốn: {{ scenarioResult.scenario_info.changes.cogs >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.cogs }}%</span>
+                <span>Thanh khoản: {{ scenarioResult.scenario_info.changes.liquidity >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.liquidity }}%</span>
               </div>
             </div>
 
@@ -1225,9 +1225,9 @@ export default {
     const scenarioFileName = ref('')
     const selectedScenario = ref('mild')
     const customRevenue = ref(-5)
-    const customInterest = ref(5)
-    const customRoe = ref(-5)
-    const customCr = ref(-5)
+    const customInterest = ref(10)
+    const customCogs = ref(3)
+    const customLiquidity = ref(-5)
     const isSimulating = ref(false)
     const scenarioResult = ref(null)
     const isAnalyzingScenario = ref(false)
@@ -1870,8 +1870,8 @@ export default {
         if (selectedScenario.value === 'custom') {
           formData.append('custom_revenue', customRevenue.value.toString())
           formData.append('custom_interest', customInterest.value.toString())
-          formData.append('custom_roe', customRoe.value.toString())
-          formData.append('custom_cr', customCr.value.toString())
+          formData.append('custom_cogs', customCogs.value.toString())
+          formData.append('custom_liquidity', customLiquidity.value.toString())
         }
 
         const response = await axios.post(`${API_BASE}/simulate-scenario`, formData, {
@@ -2118,8 +2118,8 @@ export default {
       selectedScenario,
       customRevenue,
       customInterest,
-      customRoe,
-      customCr,
+      customCogs,
+      customLiquidity,
       isSimulating,
       scenarioResult,
       isAnalyzingScenario,
