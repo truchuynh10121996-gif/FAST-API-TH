@@ -58,6 +58,13 @@
         ⚠️ Mô phỏng kịch bản xấu
       </button>
       <button
+        @click="activeTab = 'macro'"
+        class="tab-button"
+        :class="{ active: activeTab === 'macro' }"
+      >
+        📊 Mô phỏng Vĩ mô
+      </button>
+      <button
         @click="activeTab = 'train'"
         class="tab-button"
         :class="{ active: activeTab === 'train' }"
@@ -1089,6 +1096,376 @@
         </div>
       </div>
 
+      <!-- ✅ TAB CONTENT: Mô phỏng Vĩ mô -->
+      <div v-if="activeTab === 'macro'" class="tab-content">
+        <div class="card">
+          <h2 class="card-title">📊 Mô phỏng Vĩ mô - Stress Testing</h2>
+
+          <!-- Ghi chú hướng dẫn -->
+          <div class="info-note">
+            <span class="note-icon">📝</span>
+            <span class="note-text">Mô phỏng tác động của các biến vĩ mô (GDP, lạm phát, lãi suất NHNN, tỷ giá) đến khả năng trả nợ của doanh nghiệp thông qua kênh truyền dẫn Macro-to-Micro</span>
+          </div>
+
+          <!-- Bước 1: Chọn nguồn dữ liệu -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #3B82F6;">📁 Bước 1: Chọn nguồn dữ liệu</h3>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" value="from_tab" v-model="macroDataSource" />
+                <span>Sử dụng dữ liệu từ Tab "Dự Báo PD"</span>
+                <span v-if="!indicatorsDict" style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(Chưa có dữ liệu - Vui lòng dự báo PD trước)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" value="new_file" v-model="macroDataSource" />
+                <span>Tải file XLSX mới để mô phỏng</span>
+              </label>
+            </div>
+
+            <!-- Upload file mới (nếu chọn new_file) -->
+            <div v-if="macroDataSource === 'new_file'" style="margin-top: 1rem;">
+              <div class="upload-area" @click="$refs.macroFileInput.click()">
+                <div class="upload-icon">📊</div>
+                <p class="upload-text">{{ macroFileName || 'Tải lên file XLSX của doanh nghiệp' }}</p>
+                <p class="upload-hint">File XLSX phải có 3 sheets: CDKT, BCTN, LCTT</p>
+              </div>
+              <input
+                ref="macroFileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleMacroFile"
+                style="display: none"
+              />
+            </div>
+          </div>
+
+          <!-- Bước 2: Chọn kịch bản vĩ mô -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #3B82F6;">🌍 Bước 2: Chọn Kịch bản Vĩ mô</h3>
+            <div class="scenario-cards">
+              <div
+                class="scenario-card macro-card"
+                :class="{ selected: selectedMacroScenario === 'recession_mild' }"
+                @click="selectedMacroScenario = 'recession_mild'"
+              >
+                <div class="scenario-icon">🟠</div>
+                <h4 class="scenario-title">Suy thoái nhẹ</h4>
+                <ul class="scenario-details">
+                  <li>GDP: <span class="highlight-negative">-1.5%</span></li>
+                  <li>CPI: <span class="highlight-negative">6.0%</span></li>
+                  <li>PPI: <span class="highlight-negative">8.0%</span></li>
+                  <li>Lãi suất NHNN: <span class="highlight-negative">+100 bps</span></li>
+                  <li>Tỷ giá USD/VND: <span class="highlight-negative">+3.0%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card macro-card"
+                :class="{ selected: selectedMacroScenario === 'recession_moderate' }"
+                @click="selectedMacroScenario = 'recession_moderate'"
+              >
+                <div class="scenario-icon">🔴</div>
+                <h4 class="scenario-title">Suy thoái trung bình</h4>
+                <ul class="scenario-details">
+                  <li>GDP: <span class="highlight-negative">-3.5%</span></li>
+                  <li>CPI: <span class="highlight-negative">10.0%</span></li>
+                  <li>PPI: <span class="highlight-negative">14.0%</span></li>
+                  <li>Lãi suất NHNN: <span class="highlight-negative">+200 bps</span></li>
+                  <li>Tỷ giá USD/VND: <span class="highlight-negative">+6.0%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card macro-card"
+                :class="{ selected: selectedMacroScenario === 'crisis' }"
+                @click="selectedMacroScenario = 'crisis'"
+              >
+                <div class="scenario-icon">⚫</div>
+                <h4 class="scenario-title">Khủng hoảng</h4>
+                <ul class="scenario-details">
+                  <li>GDP: <span class="highlight-negative">-6.0%</span></li>
+                  <li>CPI: <span class="highlight-negative">15.0%</span></li>
+                  <li>PPI: <span class="highlight-negative">20.0%</span></li>
+                  <li>Lãi suất NHNN: <span class="highlight-negative">+300 bps</span></li>
+                  <li>Tỷ giá USD/VND: <span class="highlight-negative">+10.0%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card macro-card"
+                :class="{ selected: selectedMacroScenario === 'custom' }"
+                @click="selectedMacroScenario = 'custom'"
+              >
+                <div class="scenario-icon">🟡</div>
+                <h4 class="scenario-title">Tùy chỉnh vĩ mô</h4>
+                <p class="scenario-hint">Tự điều chỉnh các biến vĩ mô</p>
+              </div>
+            </div>
+
+            <!-- Custom macro scenario inputs -->
+            <div v-if="selectedMacroScenario === 'custom'" class="custom-scenario-inputs">
+              <h4 style="margin-bottom: 1rem;">Nhập giá trị các biến vĩ mô:</h4>
+              <div class="input-grid">
+                <div class="input-group">
+                  <label>GDP tăng trưởng (%):</label>
+                  <input type="number" v-model.number="customGdp" step="0.1" placeholder="-3.5" />
+                </div>
+                <div class="input-group">
+                  <label>Lạm phát CPI (%):</label>
+                  <input type="number" v-model.number="customCpi" step="0.1" placeholder="10.0" />
+                </div>
+                <div class="input-group">
+                  <label>Lạm phát PPI (%):</label>
+                  <input type="number" v-model.number="customPpi" step="0.1" placeholder="14.0" />
+                </div>
+                <div class="input-group">
+                  <label>Lãi suất NHNN (bps):</label>
+                  <input type="number" v-model.number="customPolicyRate" step="10" placeholder="200" />
+                </div>
+                <div class="input-group">
+                  <label>Tỷ giá USD/VND (%):</label>
+                  <input type="number" v-model.number="customFx" step="0.1" placeholder="6.0" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 3: Chọn ngành nghề -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #3B82F6;">🏭 Bước 3: Chọn Ngành nghề</h3>
+            <select v-model="selectedIndustryCode" class="input-field" style="font-size: 1rem; padding: 0.8rem;">
+              <option value="manufacturing">🏭 Sản xuất</option>
+              <option value="export">📦 Xuất khẩu</option>
+              <option value="retail">🛒 Bán lẻ</option>
+            </select>
+            <p style="margin-top: 0.5rem; color: #666; font-size: 0.9rem;">
+              Ngành nghề ảnh hưởng đến hệ số nhạy cảm trong kênh truyền dẫn Macro → Micro
+            </p>
+          </div>
+
+          <!-- Nút bắt đầu mô phỏng -->
+          <button
+            @click="runMacroSimulation"
+            class="btn btn-primary"
+            :disabled="!canRunMacroSimulation || isSimulatingMacro"
+            style="width: 100%; margin-bottom: 2rem;"
+          >
+            {{ isSimulatingMacro ? '⏳ Đang mô phỏng...' : '🎯 Bắt đầu Mô phỏng Vĩ mô' }}
+          </button>
+
+          <!-- Kết quả mô phỏng vĩ mô -->
+          <div v-if="macroResult">
+            <!-- Banner kịch bản vĩ mô -->
+            <div class="macro-scenario-banner">
+              <h3>{{ macroResult.scenario_info.name }} - Ngành: {{ macroResult.scenario_info.industry }}</h3>
+              <div class="macro-variables-grid">
+                <span>GDP: {{ macroResult.macro_variables.gdp_growth_pct >= 0 ? '+' : '' }}{{ macroResult.macro_variables.gdp_growth_pct }}%</span>
+                <span>CPI: {{ macroResult.macro_variables.inflation_cpi_pct }}%</span>
+                <span>PPI: {{ macroResult.macro_variables.inflation_ppi_pct }}%</span>
+                <span>Lãi suất NHNN: +{{ macroResult.macro_variables.policy_rate_change_bps }} bps</span>
+                <span>Tỷ giá: +{{ macroResult.macro_variables.fx_usd_vnd_pct }}%</span>
+              </div>
+            </div>
+
+            <!-- Box Chuyển đổi Macro → Micro -->
+            <div class="macro-to-micro-box">
+              <h3 style="color: #3B82F6; font-size: 1.4rem; margin-bottom: 1rem; text-align: center;">
+                🔄 Kênh truyền dẫn: Macro → Micro
+              </h3>
+              <p style="text-align: center; color: #666; margin-bottom: 1.5rem;">
+                Các biến vĩ mô được chuyển đổi thành biến vi mô thông qua hệ số nhạy cảm ngành
+              </p>
+              <div class="micro-shocks-grid">
+                <div class="micro-shock-card">
+                  <div class="micro-icon">💰</div>
+                  <div class="micro-label">Doanh thu thuần</div>
+                  <div class="micro-value" :class="{ negative: macroResult.micro_shocks.revenue_change_pct < 0 }">
+                    {{ macroResult.micro_shocks.revenue_change_pct >= 0 ? '+' : '' }}{{ macroResult.micro_shocks.revenue_change_pct }}%
+                  </div>
+                </div>
+                <div class="micro-shock-card">
+                  <div class="micro-icon">📦</div>
+                  <div class="micro-label">Giá vốn hàng bán</div>
+                  <div class="micro-value" :class="{ negative: macroResult.micro_shocks.cogs_change_pct > 0 }">
+                    {{ macroResult.micro_shocks.cogs_change_pct >= 0 ? '+' : '' }}{{ macroResult.micro_shocks.cogs_change_pct }}%
+                  </div>
+                </div>
+                <div class="micro-shock-card">
+                  <div class="micro-icon">💹</div>
+                  <div class="micro-label">Lãi suất vay</div>
+                  <div class="micro-value" :class="{ negative: macroResult.micro_shocks.interest_rate_change_pct > 0 }">
+                    {{ macroResult.micro_shocks.interest_rate_change_pct >= 0 ? '+' : '' }}{{ macroResult.micro_shocks.interest_rate_change_pct }}%
+                  </div>
+                </div>
+                <div class="micro-shock-card">
+                  <div class="micro-icon">💧</div>
+                  <div class="micro-label">Thanh khoản TSNH</div>
+                  <div class="micro-value" :class="{ negative: macroResult.micro_shocks.liquidity_shock_pct < 0 }">
+                    {{ macroResult.micro_shocks.liquidity_shock_pct >= 0 ? '+' : '' }}{{ macroResult.micro_shocks.liquidity_shock_pct }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- So sánh PD Trước/Sau - Giống tab scenario -->
+            <div class="pd-change-section">
+              <div class="pd-comparison-header">
+                <h3 style="color: #3B82F6; font-size: 1.5rem; margin: 0;">
+                  💫 Kết quả Mô phỏng Tác động
+                </h3>
+              </div>
+
+              <div class="pd-comparison-cards">
+                <!-- Card Trước -->
+                <div class="pd-card pd-before-card">
+                  <div class="pd-card-header">
+                    <span class="pd-card-icon">🟢</span>
+                    <span class="pd-card-title">Trước kịch bản vĩ mô</span>
+                  </div>
+                  <div class="pd-card-value">
+                    {{ (macroResult.pd_change.before * 100).toFixed(2) }}%
+                  </div>
+                  <div class="pd-card-label">Xác suất vỡ nợ (PD)</div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="pd-arrow-container">
+                  <div class="pd-arrow">
+                    <span style="font-size: 2.5rem; color: #3B82F6;">→</span>
+                  </div>
+                  <div class="pd-change-badge" :class="getPdChangeClass(macroResult.pd_change.change_pct)">
+                    <span class="change-icon">{{ macroResult.pd_change.change_pct >= 0 ? '⬆' : '⬇' }}</span>
+                    <span class="change-value">{{ macroResult.pd_change.change_pct >= 0 ? '+' : '' }}{{ macroResult.pd_change.change_pct }}%</span>
+                  </div>
+                </div>
+
+                <!-- Card Sau -->
+                <div class="pd-card pd-after-card">
+                  <div class="pd-card-header">
+                    <span class="pd-card-icon">🔴</span>
+                    <span class="pd-card-title">Sau kịch bản vĩ mô</span>
+                  </div>
+                  <div class="pd-card-value">
+                    {{ (macroResult.pd_change.after * 100).toFixed(2) }}%
+                  </div>
+                  <div class="pd-card-label">Xác suất vỡ nợ (PD)</div>
+                </div>
+              </div>
+
+              <!-- Nhận xét ngắn gọn -->
+              <div class="pd-analysis-note">
+                <div class="note-icon">💡</div>
+                <div class="note-content">
+                  <strong>Nhận xét:</strong>
+                  <span v-if="macroResult.pd_change.change_pct > 50">
+                    Kịch bản vĩ mô <strong>{{ macroResult.scenario_info.name }}</strong> tác động <strong style="color: #dc3545;">CỰC KỲ NGHIÊM TRỌNG</strong> đến khả năng trả nợ.
+                    Xác suất vỡ nợ tăng <strong>{{ macroResult.pd_change.change_pct }}%</strong>, cần <strong>xem xét kỹ lưỡng</strong> trước khi cấp tín dụng.
+                  </span>
+                  <span v-else-if="macroResult.pd_change.change_pct > 20">
+                    Kịch bản vĩ mô <strong>{{ macroResult.scenario_info.name }}</strong> có tác động <strong style="color: #fd7e14;">ĐÁNG KỂ</strong> đến khả năng trả nợ.
+                    PD tăng <strong>{{ macroResult.pd_change.change_pct }}%</strong>, khuyến nghị <strong>thận trọng</strong> và có biện pháp giảm thiểu rủi ro.
+                  </span>
+                  <span v-else-if="macroResult.pd_change.change_pct > 5">
+                    Kịch bản vĩ mô <strong>{{ macroResult.scenario_info.name }}</strong> tác động <strong style="color: #ffc107;">VỪA PHẢI</strong> đến rủi ro vỡ nợ.
+                    PD tăng <strong>{{ macroResult.pd_change.change_pct }}%</strong>, doanh nghiệp vẫn <strong>chịu đựng được</strong> nhưng cần theo dõi.
+                  </span>
+                  <span v-else-if="macroResult.pd_change.change_pct > 0">
+                    Kịch bản vĩ mô <strong>{{ macroResult.scenario_info.name }}</strong> có tác động <strong style="color: #28a745;">NHẸ</strong> đến khả năng trả nợ.
+                    PD chỉ tăng <strong>{{ macroResult.pd_change.change_pct }}%</strong>, doanh nghiệp <strong>khá ổn định</strong> trong điều kiện bất lợi.
+                  </span>
+                  <span v-else-if="macroResult.pd_change.change_pct === 0">
+                    Không có thay đổi đáng kể về PD. Doanh nghiệp <strong>duy trì ổn định</strong>.
+                  </span>
+                  <span v-else>
+                    Kịch bản vĩ mô <strong>{{ macroResult.scenario_info.name }}</strong> dẫn đến <strong style="color: #28a745;">CẢI THIỆN</strong> PD (giảm {{ Math.abs(macroResult.pd_change.change_pct) }}%).
+                    Đây là dấu hiệu <strong>tích cực</strong>.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 Bảng so sánh 14 chỉ số (giống tab scenario) -->
+            <div style="margin: 3rem 0;">
+              <h3 style="margin-bottom: 1.5rem; color: #3B82F6; text-align: center; font-size: 1.6rem;">
+                📊 So sánh 14 Chỉ số Tài chính (Trước / Sau kịch bản vĩ mô)
+              </h3>
+              <div class="comparison-tables-container">
+                <!-- Bảng Trước kịch bản -->
+                <div class="comparison-table-wrapper">
+                  <h4 class="table-subtitle">Trước kịch bản (Bình thường)</h4>
+                  <table class="indicators-table">
+                    <thead>
+                      <tr>
+                        <th>Chỉ số</th>
+                        <th>Giá trị</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="indicator in macroResult.indicators_before" :key="indicator.code">
+                        <td>
+                          <div class="indicator-code-cell">{{ indicator.code }}</div>
+                          <div class="indicator-name-cell">{{ indicator.name }}</div>
+                        </td>
+                        <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="pd-summary">
+                    <strong>PD (Stacking):</strong> {{ (macroResult.prediction_before.pd_stacking * 100).toFixed(2) }}%
+                  </div>
+                </div>
+
+                <!-- Bảng Sau kịch bản -->
+                <div class="comparison-table-wrapper">
+                  <h4 class="table-subtitle">Sau kịch bản ({{ macroResult.scenario_info.name }})</h4>
+                  <table class="indicators-table">
+                    <thead>
+                      <tr>
+                        <th>Chỉ số</th>
+                        <th>Giá trị</th>
+                        <th>Thay đổi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(indicator, index) in macroResult.indicators_after" :key="indicator.code">
+                        <td>
+                          <div class="indicator-code-cell">{{ indicator.code }}</div>
+                          <div class="indicator-name-cell">{{ indicator.name }}</div>
+                        </td>
+                        <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                        <td class="change-cell" :class="getChangeClass(indicator.value, macroResult.indicators_before[index].value)">
+                          {{ getChangeText(indicator.value, macroResult.indicators_before[index].value) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="pd-summary">
+                    <strong>PD (Stacking):</strong> {{ (macroResult.prediction_after.pd_stacking * 100).toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 Biểu đồ so sánh PD -->
+            <div style="margin: 3rem 0;">
+              <h3 style="margin-bottom: 1.5rem; color: #3B82F6; text-align: center; font-size: 1.6rem;">
+                📊 So sánh PD Trước và Sau Kịch bản Vĩ mô
+              </h3>
+              <div class="charts-comparison-container">
+                <div class="chart-wrapper">
+                  <h4 class="chart-title">🟢 Trước kịch bản (Bình thường)</h4>
+                  <RiskChart :prediction="macroResult.prediction_before" />
+                </div>
+                <div class="chart-wrapper">
+                  <h4 class="chart-title">🔴 Sau kịch bản ({{ macroResult.scenario_info.name }})</h4>
+                  <RiskChart :prediction="macroResult.prediction_after" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ✅ TAB CONTENT: Huấn luyện Mô hình -->
       <div v-if="activeTab === 'train'" class="tab-content">
         <div class="card">
@@ -1237,6 +1614,20 @@ export default {
     const scenarioChatInput = ref('')
     const isScenarioChatLoading = ref(false)
     const isExportingScenario = ref(false)
+
+    // Macro Scenario Simulation - NEW FEATURE
+    const macroDataSource = ref('from_tab')
+    const macroFile = ref(null)
+    const macroFileName = ref('')
+    const selectedMacroScenario = ref('recession_mild')
+    const selectedIndustryCode = ref('manufacturing')
+    const customGdp = ref(-3.5)
+    const customCpi = ref(10.0)
+    const customPpi = ref(14.0)
+    const customPolicyRate = ref(200)
+    const customFx = ref(6.0)
+    const isSimulatingMacro = ref(false)
+    const macroResult = ref(null)
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -1997,6 +2388,80 @@ export default {
       }
     }
 
+    // ================================================================================
+    // MACRO SCENARIO METHODS
+    // ================================================================================
+    const handleMacroFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        macroFile.value = file
+        macroFileName.value = file.name
+      }
+    }
+
+    const canRunMacroSimulation = computed(() => {
+      if (macroDataSource.value === 'from_tab') {
+        return !!indicatorsDict.value
+      } else if (macroDataSource.value === 'new_file') {
+        return !!macroFile.value
+      }
+      return false
+    })
+
+    const runMacroSimulation = async () => {
+      if (!canRunMacroSimulation.value) return
+
+      isSimulatingMacro.value = true
+      macroResult.value = null
+
+      try {
+        const formData = new FormData()
+
+        // Thêm nguồn dữ liệu
+        if (macroDataSource.value === 'from_tab') {
+          formData.append('indicators_json', JSON.stringify(indicatorsDict.value))
+        } else if (macroDataSource.value === 'new_file') {
+          formData.append('file', macroFile.value)
+        }
+
+        // Thêm kịch bản vĩ mô
+        formData.append('scenario_type', selectedMacroScenario.value)
+        formData.append('industry_code', selectedIndustryCode.value)
+
+        // Nếu là custom, thêm các giá trị tùy chỉnh
+        if (selectedMacroScenario.value === 'custom') {
+          formData.append('custom_gdp', customGdp.value)
+          formData.append('custom_cpi', customCpi.value)
+          formData.append('custom_ppi', customPpi.value)
+          formData.append('custom_policy_rate', customPolicyRate.value)
+          formData.append('custom_fx', customFx.value)
+        } else {
+          formData.append('custom_gdp', 0)
+          formData.append('custom_cpi', 0)
+          formData.append('custom_ppi', 0)
+          formData.append('custom_policy_rate', 0)
+          formData.append('custom_fx', 0)
+        }
+
+        const response = await axios.post(`${API_BASE}/simulate-scenario-macro`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (response.data.status === 'success') {
+          macroResult.value = response.data
+          console.log('✅ Mô phỏng vĩ mô thành công:', macroResult.value)
+          alert('✅ Mô phỏng kịch bản vĩ mô thành công!')
+        }
+      } catch (error) {
+        console.error('❌ Lỗi khi mô phỏng vĩ mô:', error)
+        alert('❌ Lỗi khi mô phỏng: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isSimulatingMacro.value = false
+      }
+    }
+
     const getPdChangeClass = (changePct) => {
       const absChange = Math.abs(changePct)
       if (absChange < 10) return 'pd-change-low'
@@ -2139,7 +2604,23 @@ export default {
       exportScenarioReport,
       getPdChangeClass,
       getChangeClass,
-      getChangeText
+      getChangeText,
+      // Macro Scenario Simulation - NEW FEATURE
+      macroDataSource,
+      macroFile,
+      macroFileName,
+      selectedMacroScenario,
+      selectedIndustryCode,
+      customGdp,
+      customCpi,
+      customPpi,
+      customPolicyRate,
+      customFx,
+      isSimulatingMacro,
+      macroResult,
+      handleMacroFile,
+      canRunMacroSimulation,
+      runMacroSimulation
     }
   }
 }

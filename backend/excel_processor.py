@@ -708,6 +708,120 @@ class ExcelProcessor:
 
         return new_indicators
 
+    def macro_to_micro_transmission(
+        self,
+        gdp_growth_pct: float,
+        inflation_cpi_pct: float,
+        inflation_ppi_pct: float,
+        policy_rate_change_bps: float,
+        fx_usd_vnd_pct: float,
+        industry_code: str
+    ) -> Dict[str, float]:
+        """
+        Kênh truyền dẫn từ biến vĩ mô sang biến vi mô (Macro-to-Micro Transmission)
+
+        Args:
+            gdp_growth_pct: % tăng trưởng GDP (VD: -3.5 = giảm 3.5%)
+            inflation_cpi_pct: % lạm phát CPI (VD: 10.0 = lạm phát 10%)
+            inflation_ppi_pct: % lạm phát PPI - giá sản xuất (VD: 14.0)
+            policy_rate_change_bps: Thay đổi lãi suất NHNN (basis points, VD: 200 = tăng 2%)
+            fx_usd_vnd_pct: % thay đổi tỷ giá USD/VND (VD: 6.0 = VND mất giá 6%)
+            industry_code: Mã ngành ("manufacturing", "export", "retail")
+
+        Returns:
+            Dict chứa 4 biến vi mô:
+            - revenue_change_pct: % thay đổi Doanh thu thuần
+            - cogs_change_pct: % thay đổi Giá vốn hàng bán
+            - interest_rate_change_pct: % thay đổi Lãi suất vay
+            - liquidity_shock_pct: % sốc thanh khoản TSNH
+
+        Công thức kênh truyền dẫn:
+            1. GDP → Doanh thu:
+               revenue_change = (GDP * 0.8 + CPI * 0.2) * industry_sensitivity["revenue"]
+
+            2. PPI + Tỷ giá → Giá vốn:
+               cogs_change = (PPI * 0.7 + FX * 0.3) * industry_sensitivity["cogs"]
+
+            3. Lãi suất NHNN → Lãi vay:
+               interest_rate_change = policy_rate_bps / 100 * 1.2
+
+            4. GDP + Lãi suất → Thanh khoản:
+               liquidity_shock = GDP * 0.5 + policy_rate_bps / 100 * (-0.8)
+        """
+
+        # Hệ số nhạy cảm ngành (Industry Sensitivity)
+        industry_sensitivity = {
+            "manufacturing": {  # Sản xuất
+                "revenue": 1.0,
+                "cogs": 1.2
+            },
+            "export": {  # Xuất khẩu
+                "revenue": 1.3,
+                "cogs": 1.1
+            },
+            "retail": {  # Bán lẻ
+                "revenue": 0.8,
+                "cogs": 0.9
+            }
+        }
+
+        # Lấy hệ số ngành (mặc định là manufacturing nếu không tìm thấy)
+        sensitivity = industry_sensitivity.get(industry_code, industry_sensitivity["manufacturing"])
+
+        # ================================================================================
+        # KÊNH 1: GDP → Doanh thu thuần
+        # GDP tăng → Tiêu dùng tăng → Doanh thu tăng
+        # CPI tăng → Sức mua giảm → Doanh thu giảm (trọng số nhỏ hơn)
+        # ================================================================================
+        revenue_change_pct = (
+            gdp_growth_pct * 0.8 +
+            inflation_cpi_pct * 0.2
+        ) * sensitivity["revenue"]
+
+        # ================================================================================
+        # KÊNH 2: PPI + Tỷ giá → Giá vốn hàng bán
+        # PPI tăng → Giá nguyên liệu tăng → Giá vốn tăng
+        # Tỷ giá tăng (VND mất giá) → Nhập khẩu nguyên liệu đắt hơn → Giá vốn tăng
+        # ================================================================================
+        cogs_change_pct = (
+            inflation_ppi_pct * 0.7 +
+            fx_usd_vnd_pct * 0.3
+        ) * sensitivity["cogs"]
+
+        # ================================================================================
+        # KÊNH 3: Lãi suất NHNN → Lãi suất vay doanh nghiệp
+        # NHNN tăng lãi suất → Ngân hàng tăng lãi suất cho vay
+        # Hệ số nhân 1.2: Lãi suất cho vay thường tăng mạnh hơn lãi suất NHNN
+        # ================================================================================
+        # Chuyển từ basis points sang % (100 bps = 1%)
+        interest_rate_change_pct = (policy_rate_change_bps / 100) * 1.2
+
+        # ================================================================================
+        # KÊNH 4: GDP + Lãi suất → Thanh khoản (TSNH)
+        # GDP giảm → Doanh thu giảm → Thu hồi tiền chậm → Thanh khoản giảm
+        # Lãi suất tăng → Vay khó hơn → Thanh khoản giảm
+        # ================================================================================
+        liquidity_shock_pct = (
+            gdp_growth_pct * 0.5 +
+            (policy_rate_change_bps / 100) * (-0.8)
+        )
+
+        # Làm tròn kết quả
+        result = {
+            "revenue_change_pct": round(revenue_change_pct, 2),
+            "cogs_change_pct": round(cogs_change_pct, 2),
+            "interest_rate_change_pct": round(interest_rate_change_pct, 2),
+            "liquidity_shock_pct": round(liquidity_shock_pct, 2)
+        }
+
+        print(f"📊 Kênh truyền dẫn Macro → Micro:")
+        print(f"   - Doanh thu thay đổi: {result['revenue_change_pct']}%")
+        print(f"   - Giá vốn thay đổi: {result['cogs_change_pct']}%")
+        print(f"   - Lãi suất vay thay đổi: {result['interest_rate_change_pct']}%")
+        print(f"   - Thanh khoản sốc: {result['liquidity_shock_pct']}%")
+
+        return result
+
 
 # Khởi tạo instance global
 excel_processor = ExcelProcessor()
