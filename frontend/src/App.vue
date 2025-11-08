@@ -71,6 +71,14 @@
       >
         📚 Huấn luyện mô hình
       </button>
+      <button
+        @click="activeTab = 'early-warning'"
+        class="tab-button"
+        :class="{ active: activeTab === 'early-warning' }"
+        style="background: linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%); color: white; font-weight: 700;"
+      >
+        ⚠️ Cảnh báo Rủi ro Sớm
+      </button>
     </div>
 
     <!-- Main Container -->
@@ -1510,6 +1518,290 @@
           </div>
         </div>
       </div>
+
+      <!-- ✅ TAB CONTENT: Cảnh báo Rủi ro Sớm (Early Warning System) -->
+      <div v-if="activeTab === 'early-warning'" class="tab-content">
+        <div class="card early-warning-card">
+          <h2 class="card-title early-warning-title">⚠️ Cảnh báo Rủi ro Sớm (Early Warning System)</h2>
+
+          <!-- Hướng dẫn sử dụng -->
+          <div class="info-note" style="background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%); border-left: 4px solid #FF6B6B;">
+            <span class="note-icon">📋</span>
+            <span class="note-text">
+              Hệ thống sử dụng ML (Stacking + K-Means + Gemini AI) để chẩn đoán sức khỏe tài chính doanh nghiệp.
+              <br><strong>Bước 1:</strong> Train model với file 1300 DN →
+              <strong>Bước 2:</strong> Upload DN cần kiểm tra →
+              <strong>Bước 3:</strong> Xem kết quả chẩn đoán chi tiết.
+            </span>
+          </div>
+
+          <!-- BƯỚC 1: Upload Model Training Data -->
+          <div class="early-warning-section" style="margin: 2rem 0;">
+            <h3 class="section-title" style="color: #FF6B6B; font-size: 1.3rem; margin-bottom: 1rem;">
+              🔄 Bước 1: Train Model với dữ liệu 1300 DN
+            </h3>
+
+            <div class="upload-area" @click="$refs.ewTrainFileInput.click()">
+              <div class="upload-icon">📊</div>
+              <p class="upload-text">{{ ewTrainFileName || 'Tải file Excel/CSV chứa 1300 DN' }}</p>
+              <p class="upload-hint">
+                File cần có 14 cột (X_1 → X_14) + cột 'label' (0=không vỡ nợ, 1=vỡ nợ)
+              </p>
+            </div>
+
+            <input
+              ref="ewTrainFileInput"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              @change="handleEWTrainFile"
+              style="display: none"
+            />
+
+            <button
+              @click="trainEarlyWarningModel"
+              class="btn btn-primary"
+              :disabled="!ewTrainFile || isEWTraining"
+              style="margin-top: 1rem; width: 100%;"
+            >
+              {{ isEWTraining ? '⏳ Đang train model...' : '🔄 Train Early Warning Model' }}
+            </button>
+
+            <!-- Kết quả training -->
+            <div v-if="ewTrainResult" style="margin-top: 1.5rem;">
+              <h4 style="color: #10B981; font-size: 1.1rem; margin-bottom: 1rem;">✅ Model đã được train thành công!</h4>
+              <div class="training-result-box">
+                <p><strong>📊 Số mẫu:</strong> {{ ewTrainResult.num_samples }} (Healthy: {{ ewTrainResult.num_healthy }}, Default: {{ ewTrainResult.num_default }})</p>
+
+                <div style="margin-top: 1rem;">
+                  <strong>🎯 Top 5 Feature Importances:</strong>
+                  <div class="feature-importance-list" style="margin-top: 0.5rem;">
+                    <div
+                      v-for="(value, key) in getTopFeatureImportances()"
+                      :key="key"
+                      class="feature-importance-item"
+                      style="margin-bottom: 0.5rem;"
+                    >
+                      <span style="font-weight: 600;">{{ key }}:</span>
+                      <div class="importance-bar" style="width: {{ value * 300 }}px; background: #FF6B9D; height: 20px; border-radius: 4px; display: inline-block; margin-left: 1rem;"></div>
+                      <span style="margin-left: 0.5rem;">{{ (value * 100).toFixed(2) }}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p style="margin-top: 1rem;"><strong>🔍 Cluster Distribution:</strong></p>
+                <div v-if="ewTrainResult.cluster_distribution" class="cluster-distribution">
+                  <span v-for="(count, cluster) in ewTrainResult.cluster_distribution" :key="cluster" style="margin-right: 1rem;">
+                    {{ cluster }}: {{ count }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BƯỚC 2: Upload DN cần kiểm tra -->
+          <div v-if="ewTrainResult" class="early-warning-section" style="margin: 3rem 0;">
+            <h3 class="section-title" style="color: #FF6B6B; font-size: 1.3rem; margin-bottom: 1rem;">
+              🩺 Bước 2: Upload DN cần kiểm tra
+            </h3>
+
+            <!-- Sub-tabs: Upload file vs Dùng dữ liệu từ Tab Dự báo PD -->
+            <div class="sub-tabs-container" style="margin: 1rem 0;">
+              <button
+                @click="ewCheckMode = 'upload'"
+                class="sub-tab-button"
+                :class="{ active: ewCheckMode === 'upload' }"
+              >
+                📤 Upload File Mới
+              </button>
+              <button
+                @click="ewCheckMode = 'from-predict'"
+                class="sub-tab-button"
+                :class="{ active: ewCheckMode === 'from-predict' }"
+                :disabled="!indicatorsDict"
+              >
+                🔗 Dùng dữ liệu từ Tab Dự báo PD
+              </button>
+            </div>
+
+            <!-- Mode: Upload File Mới -->
+            <div v-if="ewCheckMode === 'upload'">
+              <div class="upload-area" @click="$refs.ewCheckFileInput.click()">
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">{{ ewCheckFileName || 'Tải file XLSX của DN cần kiểm tra' }}</p>
+                <p class="upload-hint">
+                  File XLSX phải có 3 sheets: CDKT, BCTN, LCTT
+                </p>
+              </div>
+
+              <input
+                ref="ewCheckFileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleEWCheckFile"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Mode: Dùng dữ liệu từ Tab Dự báo PD -->
+            <div v-if="ewCheckMode === 'from-predict' && indicatorsDict">
+              <div class="success-box" style="background: #E8F5E9; border: 2px solid #4CAF50; padding: 1rem; border-radius: 8px;">
+                <p style="color: #2E7D32; font-weight: 600;">✅ Sẽ sử dụng 14 chỉ số từ Tab Dự báo PD</p>
+              </div>
+            </div>
+
+            <!-- Chọn kỳ báo cáo (tùy chọn) -->
+            <div style="margin-top: 1.5rem;">
+              <label class="input-label">📅 Kỳ báo cáo (tùy chọn - chỉ để hiển thị):</label>
+              <select v-model="ewReportPeriod" class="input-field">
+                <option value="">-- Không chọn --</option>
+                <option value="Q1/2024">Q1/2024</option>
+                <option value="Q2/2024">Q2/2024</option>
+                <option value="Q3/2024">Q3/2024</option>
+                <option value="Q4/2024">Q4/2024</option>
+                <option value="6T1/2024">6 tháng đầu năm 2024</option>
+                <option value="6T2/2024">6 tháng cuối năm 2024</option>
+                <option value="2024">Năm 2024</option>
+              </select>
+            </div>
+
+            <!-- Chọn ngành -->
+            <div style="margin-top: 1rem;">
+              <label class="input-label">🏭 Chọn ngành nghề DN:</label>
+              <select v-model="ewIndustryCode" class="input-field">
+                <option value="manufacturing">🏭 Sản xuất (Manufacturing)</option>
+                <option value="export">📦 Xuất khẩu (Export)</option>
+                <option value="retail">🛒 Bán lẻ (Retail)</option>
+              </select>
+            </div>
+
+            <!-- Nút Chẩn đoán -->
+            <button
+              @click="checkEarlyWarning"
+              class="btn btn-primary"
+              :disabled="(!ewCheckFile && ewCheckMode === 'upload' && !indicatorsDict) || isEWChecking"
+              style="margin-top: 1.5rem; width: 100%; font-size: 1.1rem; padding: 1rem;"
+            >
+              {{ isEWChecking ? '⏳ Đang chẩn đoán...' : '🩺 Chẩn đoán Rủi ro' }}
+            </button>
+          </div>
+
+          <!-- BƯỚC 3: Hiển thị kết quả -->
+          <div v-if="ewCheckResult" class="early-warning-results" style="margin: 3rem 0;">
+            <h3 class="section-title" style="color: #FF1493; font-size: 1.5rem; margin-bottom: 2rem; text-align: center; font-weight: 900;">
+              📊 Bước 3: Kết quả Chẩn đoán
+            </h3>
+
+            <!-- Kỳ báo cáo -->
+            <div v-if="ewCheckResult.report_period" style="text-align: center; margin-bottom: 1.5rem;">
+              <span style="font-size: 1.1rem; color: #666;">📅 Kỳ báo cáo: <strong>{{ ewCheckResult.report_period }}</strong></span>
+            </div>
+
+            <!-- 1. Health Score Gauge -->
+            <div class="health-score-section" style="margin-bottom: 3rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;">💚 Health Score</h4>
+              <div id="health-score-gauge" style="width: 100%; height: 300px;"></div>
+
+              <!-- Risk Level Badge -->
+              <div class="risk-level-badge" :style="{ backgroundColor: ewCheckResult.risk_level_color }">
+                {{ ewCheckResult.risk_level_icon }} {{ ewCheckResult.risk_level_text }}
+              </div>
+
+              <!-- Current PD -->
+              <div style="text-align: center; margin-top: 1rem; font-size: 1.1rem;">
+                <strong>PD hiện tại:</strong> <span :style="{ color: ewCheckResult.risk_level_color, fontSize: '1.3rem', fontWeight: 'bold' }">{{ ewCheckResult.current_pd.toFixed(2) }}%</span>
+              </div>
+            </div>
+
+            <!-- 2. Top 3 Điểm Yếu -->
+            <div class="weaknesses-section" style="margin-bottom: 3rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem;">⚠️ Top 3 Điểm Yếu Cần Cải Thiện</h4>
+              <div class="weakness-cards">
+                <div
+                  v-for="(weakness, index) in ewCheckResult.top_weaknesses"
+                  :key="index"
+                  class="weakness-card"
+                  :class="'severity-' + weakness.severity"
+                >
+                  <div class="weakness-header">
+                    <span class="weakness-number">#{{ index + 1 }}</span>
+                    <span class="weakness-name">{{ weakness.name }}</span>
+                  </div>
+                  <div class="weakness-body">
+                    <div class="weakness-values">
+                      <div class="weakness-value">
+                        <span class="value-label">Giá trị hiện tại:</span>
+                        <span class="value-number">{{ weakness.current_value.toFixed(4) }}</span>
+                      </div>
+                      <div class="weakness-value">
+                        <span class="value-label">Ngưỡng an toàn:</span>
+                        <span class="value-number">{{ weakness.safe_threshold.toFixed(4) }}</span>
+                      </div>
+                      <div class="weakness-value">
+                        <span class="value-label">Khoảng cách (Gap):</span>
+                        <span class="value-number" :style="{ color: weakness.gap < 0 ? '#EF4444' : '#10B981' }">
+                          {{ weakness.gap.toFixed(4) }}
+                        </span>
+                      </div>
+                      <div class="weakness-value">
+                        <span class="value-label">Percentile:</span>
+                        <span class="value-number">{{ weakness.percentile.toFixed(1) }}%</span>
+                      </div>
+                    </div>
+                    <!-- Mini bar chart cho gap -->
+                    <div class="weakness-gap-chart">
+                      <div class="gap-bar-container">
+                        <div
+                          class="gap-bar"
+                          :style="{
+                            width: Math.min(Math.abs(weakness.gap / weakness.safe_threshold) * 100, 100) + '%',
+                            backgroundColor: weakness.gap < 0 ? '#EF4444' : '#10B981'
+                          }"
+                        ></div>
+                      </div>
+                      <div class="gap-severity-label">{{ getSeverityLabel(weakness.severity) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Cluster Position -->
+            <div class="cluster-section" style="margin-bottom: 3rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem;">📍 Vị trí trong 1300 DN</h4>
+              <div class="cluster-info-box">
+                <p style="font-size: 1.2rem; text-align: center; margin-bottom: 1rem;">
+                  Bạn thuộc <strong>{{ ewCheckResult.cluster_info.cluster_name }}</strong>
+                </p>
+                <p style="font-size: 1rem; text-align: center; margin-bottom: 1.5rem;">
+                  Xếp hạng <strong style="color: #FF6B9D; font-size: 1.3rem;">{{ ewCheckResult.cluster_info.position_percentile.toFixed(1) }}%</strong> trong 1300 DN
+                </p>
+                <p style="text-align: center; color: #666;">
+                  PD trung bình của cluster: {{ ewCheckResult.cluster_info.cluster_avg_pd.toFixed(2) }}%
+                </p>
+              </div>
+
+              <!-- Radar Chart: So sánh với median của cluster -->
+              <div id="cluster-radar-chart" style="width: 100%; height: 500px; margin-top: 1.5rem;"></div>
+            </div>
+
+            <!-- 4. PD Projection Timeline -->
+            <div class="pd-projection-section" style="margin-bottom: 3rem;">
+              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem;">📈 Dự báo PD Tương lai (3/6/12 tháng)</h4>
+              <div id="pd-projection-chart" style="width: 100%; height: 400px;"></div>
+            </div>
+
+            <!-- 5. Gemini AI Diagnosis -->
+            <div class="gemini-diagnosis-section" style="margin-bottom: 2rem;">
+              <h4 style="color: #FF1493; font-size: 1.3rem; margin-bottom: 1rem; text-align: center; font-weight: 900;">
+                🤖 Báo cáo Chẩn đoán từ Gemini AI
+              </h4>
+              <div class="gemini-diagnosis-box">
+                <div class="diagnosis-content" v-html="renderMarkdown(ewCheckResult.gemini_diagnosis)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -1628,6 +1920,19 @@ export default {
     const customFx = ref(6.0)
     const isSimulatingMacro = ref(false)
     const macroResult = ref(null)
+
+    // Early Warning System - NEW FEATURE
+    const ewTrainFile = ref(null)
+    const ewTrainFileName = ref('')
+    const isEWTraining = ref(false)
+    const ewTrainResult = ref(null)
+    const ewCheckMode = ref('upload')
+    const ewCheckFile = ref(null)
+    const ewCheckFileName = ref('')
+    const ewReportPeriod = ref('')
+    const ewIndustryCode = ref('manufacturing')
+    const isEWChecking = ref(false)
+    const ewCheckResult = ref(null)
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -2484,6 +2789,500 @@ export default {
       return `${arrow}${Math.abs(change).toFixed(1)}%`
     }
 
+    // ====================================================================================================
+    // EARLY WARNING SYSTEM METHODS
+    // ====================================================================================================
+
+    const handleEWTrainFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        ewTrainFile.value = file
+        ewTrainFileName.value = file.name
+      }
+    }
+
+    const trainEarlyWarningModel = async () => {
+      if (!ewTrainFile.value) return
+
+      isEWTraining.value = true
+      ewTrainResult.value = null
+
+      try {
+        const formData = new FormData()
+        formData.append('file', ewTrainFile.value)
+
+        const response = await axios.post(`${API_BASE}/train-early-warning-model`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (response.data.status === 'success') {
+          ewTrainResult.value = response.data
+          alert('✅ Early Warning System trained successfully!')
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi train model: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isEWTraining.value = false
+      }
+    }
+
+    const handleEWCheckFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        ewCheckFile.value = file
+        ewCheckFileName.value = file.name
+      }
+    }
+
+    const checkEarlyWarning = async () => {
+      if (ewCheckMode.value === 'upload' && !ewCheckFile.value) {
+        alert('⚠️ Vui lòng upload file DN cần kiểm tra!')
+        return
+      }
+
+      if (ewCheckMode.value === 'from-predict' && !indicatorsDict.value) {
+        alert('⚠️ Chưa có dữ liệu từ Tab Dự báo PD. Vui lòng chạy dự báo PD trước!')
+        return
+      }
+
+      isEWChecking.value = true
+      ewCheckResult.value = null
+
+      try {
+        const formData = new FormData()
+
+        if (ewCheckMode.value === 'upload') {
+          formData.append('file', ewCheckFile.value)
+        } else {
+          formData.append('indicators_json', JSON.stringify(indicatorsDict.value))
+        }
+
+        if (ewReportPeriod.value) {
+          formData.append('report_period', ewReportPeriod.value)
+        }
+
+        formData.append('industry_code', ewIndustryCode.value)
+
+        const response = await axios.post(`${API_BASE}/early-warning-check`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (response.data.status === 'success') {
+          ewCheckResult.value = response.data
+
+          // Vẽ các biểu đồ sau khi có kết quả
+          await nextTick()
+          renderEWCharts()
+
+          alert('✅ Chẩn đoán rủi ro thành công!')
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi kiểm tra cảnh báo: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isEWChecking.value = false
+      }
+    }
+
+    const renderEWCharts = () => {
+      if (!ewCheckResult.value) return
+
+      // 1. Health Score Gauge
+      renderHealthScoreGauge()
+
+      // 2. Cluster Radar Chart
+      renderClusterRadarChart()
+
+      // 3. PD Projection Chart
+      renderPDProjectionChart()
+    }
+
+    const renderHealthScoreGauge = () => {
+      const chartDom = document.getElementById('health-score-gauge')
+      if (!chartDom) return
+
+      const myChart = echarts.init(chartDom)
+
+      const healthScore = ewCheckResult.value.health_score
+      const riskLevelColor = ewCheckResult.value.risk_level_color
+
+      const option = {
+        series: [
+          {
+            type: 'gauge',
+            startAngle: 180,
+            endAngle: 0,
+            min: 0,
+            max: 100,
+            splitNumber: 10,
+            itemStyle: {
+              color: riskLevelColor
+            },
+            progress: {
+              show: true,
+              width: 30
+            },
+            pointer: {
+              show: true,
+              length: '60%',
+              width: 8
+            },
+            axisLine: {
+              lineStyle: {
+                width: 30,
+                color: [
+                  [0.4, '#EF4444'],
+                  [0.6, '#FF8C00'],
+                  [0.8, '#F59E0B'],
+                  [1, '#10B981']
+                ]
+              }
+            },
+            axisTick: {
+              show: true
+            },
+            splitLine: {
+              length: 15,
+              lineStyle: {
+                width: 2,
+                color: '#999'
+              }
+            },
+            axisLabel: {
+              distance: 25,
+              color: '#999',
+              fontSize: 12
+            },
+            detail: {
+              valueAnimation: true,
+              formatter: '{value}',
+              fontSize: 40,
+              fontWeight: 'bold',
+              color: riskLevelColor,
+              offsetCenter: [0, '70%']
+            },
+            data: [
+              {
+                value: healthScore,
+                name: 'Health Score'
+              }
+            ]
+          }
+        ]
+      }
+
+      myChart.setOption(option)
+    }
+
+    const renderClusterRadarChart = () => {
+      const chartDom = document.getElementById('cluster-radar-chart')
+      if (!chartDom) return
+
+      const myChart = echarts.init(chartDom)
+
+      const clusterInfo = ewCheckResult.value.cluster_info
+      const clusterMedian = clusterInfo.cluster_median_indicators
+
+      // Lấy 14 chỉ số hiện tại (từ indicatorsDict hoặc từ checkResult)
+      let currentIndicators = {}
+      if (ewCheckMode.value === 'from-predict' && indicatorsDict.value) {
+        currentIndicators = indicatorsDict.value
+      } else {
+        // Nếu upload file, cần lấy từ backend (đã được tính)
+        // Tạm thời sử dụng cluster median
+        currentIndicators = clusterMedian
+      }
+
+      const indicatorNames = [
+        'X_1: Biên LN gộp',
+        'X_2: Biên LNTT',
+        'X_3: ROA',
+        'X_4: ROE',
+        'X_5: Nợ/TS',
+        'X_6: Nợ/VCSH',
+        'X_7: TT hiện hành',
+        'X_8: TT nhanh',
+        'X_9: Trả lãi',
+        'X_10: Trả nợ gốc',
+        'X_11: Tạo tiền',
+        'X_12: Vòng quay HTK',
+        'X_13: Kỳ thu tiền',
+        'X_14: Hiệu suất TS'
+      ]
+
+      // Tính max cho mỗi indicator (để normalize)
+      const maxValues = {}
+      for (let i = 1; i <= 14; i++) {
+        const key = `X_${i}`
+        const currentVal = currentIndicators[key] || 0
+        const medianVal = clusterMedian[key] || 0
+        maxValues[key] = Math.max(Math.abs(currentVal), Math.abs(medianVal), 1) * 1.5
+      }
+
+      const radarIndicators = indicatorNames.map((name, index) => {
+        const key = `X_${index + 1}`
+        return {
+          name: name,
+          max: maxValues[key]
+        }
+      })
+
+      const currentValues = []
+      const medianValues = []
+
+      for (let i = 1; i <= 14; i++) {
+        const key = `X_${i}`
+        currentValues.push(Math.abs(currentIndicators[key] || 0))
+        medianValues.push(Math.abs(clusterMedian[key] || 0))
+      }
+
+      const option = {
+        title: {
+          text: 'So sánh với Median của Cluster',
+          left: 'center',
+          textStyle: {
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: '#FF6B9D'
+          }
+        },
+        tooltip: {
+          trigger: 'item'
+        },
+        legend: {
+          bottom: 10,
+          data: ['Doanh nghiệp của bạn', 'Median của Cluster']
+        },
+        radar: {
+          indicator: radarIndicators,
+          splitNumber: 4,
+          shape: 'circle',
+          splitArea: {
+            areaStyle: {
+              color: ['rgba(255, 107, 157, 0.1)', 'rgba(255, 107, 157, 0.05)']
+            }
+          },
+          axisLine: {
+            lineStyle: {
+              color: 'rgba(255, 107, 157, 0.3)'
+            }
+          },
+          splitLine: {
+            lineStyle: {
+              color: 'rgba(255, 107, 157, 0.3)'
+            }
+          }
+        },
+        series: [
+          {
+            name: 'Chỉ số tài chính',
+            type: 'radar',
+            data: [
+              {
+                value: currentValues,
+                name: 'Doanh nghiệp của bạn',
+                areaStyle: {
+                  color: 'rgba(255, 107, 157, 0.3)'
+                },
+                lineStyle: {
+                  color: '#FF6B9D',
+                  width: 2
+                },
+                itemStyle: {
+                  color: '#FF6B9D'
+                }
+              },
+              {
+                value: medianValues,
+                name: 'Median của Cluster',
+                areaStyle: {
+                  color: 'rgba(59, 130, 246, 0.2)'
+                },
+                lineStyle: {
+                  color: '#3B82F6',
+                  width: 2
+                },
+                itemStyle: {
+                  color: '#3B82F6'
+                }
+              }
+            ]
+          }
+        ]
+      }
+
+      myChart.setOption(option)
+    }
+
+    const renderPDProjectionChart = () => {
+      const chartDom = document.getElementById('pd-projection-chart')
+      if (!chartDom) return
+
+      const myChart = echarts.init(chartDom)
+
+      const pdProjection = ewCheckResult.value.pd_projection
+
+      const xAxisData = ['Hiện tại', '3 tháng', '6 tháng', '12 tháng']
+
+      const mildData = [
+        pdProjection.current,
+        pdProjection.recession_mild['3_months'],
+        pdProjection.recession_mild['6_months'],
+        pdProjection.recession_mild['12_months']
+      ]
+
+      const moderateData = [
+        pdProjection.current,
+        pdProjection.recession_moderate['3_months'],
+        pdProjection.recession_moderate['6_months'],
+        pdProjection.recession_moderate['12_months']
+      ]
+
+      const crisisData = [
+        pdProjection.current,
+        pdProjection.crisis['3_months'],
+        pdProjection.crisis['6_months'],
+        pdProjection.crisis['12_months']
+      ]
+
+      const option = {
+        title: {
+          text: 'Dự báo PD theo các kịch bản vĩ mô',
+          left: 'center',
+          textStyle: {
+            fontSize: 16,
+            fontWeight: 'bold',
+            color: '#FF6B9D'
+          }
+        },
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params) => {
+            let result = `<div style="font-weight: bold; margin-bottom: 5px;">${params[0].name}</div>`
+            params.forEach(param => {
+              result += `<div>${param.marker}${param.seriesName}: ${param.value.toFixed(2)}%</div>`
+            })
+            return result
+          }
+        },
+        legend: {
+          bottom: 10,
+          data: ['🟠 Suy thoái nhẹ', '🔴 Suy thoái trung bình', '⚫ Khủng hoảng']
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '15%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: xAxisData
+        },
+        yAxis: {
+          type: 'value',
+          name: 'PD (%)',
+          axisLabel: {
+            formatter: '{value}%'
+          }
+        },
+        series: [
+          {
+            name: '🟠 Suy thoái nhẹ',
+            type: 'line',
+            data: mildData,
+            smooth: true,
+            lineStyle: {
+              color: '#F59E0B',
+              width: 3
+            },
+            itemStyle: {
+              color: '#F59E0B'
+            },
+            areaStyle: {
+              color: 'rgba(245, 158, 11, 0.1)'
+            }
+          },
+          {
+            name: '🔴 Suy thoái trung bình',
+            type: 'line',
+            data: moderateData,
+            smooth: true,
+            lineStyle: {
+              color: '#FF8C00',
+              width: 3
+            },
+            itemStyle: {
+              color: '#FF8C00'
+            },
+            areaStyle: {
+              color: 'rgba(255, 140, 0, 0.1)'
+            }
+          },
+          {
+            name: '⚫ Khủng hoảng',
+            type: 'line',
+            data: crisisData,
+            smooth: true,
+            lineStyle: {
+              color: '#EF4444',
+              width: 3
+            },
+            itemStyle: {
+              color: '#EF4444'
+            },
+            areaStyle: {
+              color: 'rgba(239, 68, 68, 0.1)'
+            }
+          }
+        ]
+      }
+
+      myChart.setOption(option)
+    }
+
+    const getTopFeatureImportances = () => {
+      if (!ewTrainResult.value || !ewTrainResult.value.feature_importances) return {}
+
+      const importances = ewTrainResult.value.feature_importances
+      const sorted = Object.entries(importances)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+
+      return Object.fromEntries(sorted)
+    }
+
+    const getSeverityLabel = (severity) => {
+      const labels = {
+        'critical': '🔴 Nghiêm trọng',
+        'moderate': '🟡 Trung bình',
+        'low': '🟢 Nhẹ'
+      }
+      return labels[severity] || severity
+    }
+
+    const renderMarkdown = (text) => {
+      if (!text) return ''
+
+      // Simple markdown rendering
+      let html = text
+        .replace(/^### (.+)$/gm, '<h4 style="color: #FF6B9D; margin-top: 1.5rem; margin-bottom: 0.5rem;">$1</h4>')
+        .replace(/^## (.+)$/gm, '<h3 style="color: #FF1493; margin-top: 2rem; margin-bottom: 1rem; font-weight: 900;">$1</h3>')
+        .replace(/^\*\*(.+)\*\*$/gm, '<div style="font-weight: 700; margin-top: 1rem;">$1</div>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+
+      html = '<p>' + html + '</p>'
+      html = html.replace(/<\/li>\n<li>/g, '</li><li>').replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+
+      return html
+    }
+
     // Mounted - Add scroll listener
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', handleScroll)
@@ -2620,7 +3419,27 @@ export default {
       macroResult,
       handleMacroFile,
       canRunMacroSimulation,
-      runMacroSimulation
+      runMacroSimulation,
+      // Early Warning System - NEW FEATURE
+      ewTrainFile,
+      ewTrainFileName,
+      isEWTraining,
+      ewTrainResult,
+      ewCheckMode,
+      ewCheckFile,
+      ewCheckFileName,
+      ewReportPeriod,
+      ewIndustryCode,
+      isEWChecking,
+      ewCheckResult,
+      handleEWTrainFile,
+      trainEarlyWarningModel,
+      handleEWCheckFile,
+      checkEarlyWarning,
+      renderEWCharts,
+      getTopFeatureImportances,
+      getSeverityLabel,
+      renderMarkdown
     }
   }
 }

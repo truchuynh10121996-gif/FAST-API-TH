@@ -2618,3 +2618,312 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ====================================================================================================
+   EARLY WARNING SYSTEM - NEW FEATURE
+   ==================================================================================================== */
+
+.early-warning-card {
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%);
+  border: 2px solid #FF6B6B;
+}
+
+.early-warning-title {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.early-warning-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 107, 107, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
+}
+
+.training-result-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.feature-importance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feature-importance-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+}
+
+.cluster-distribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.success-box {
+  background: #E8F5E9;
+  border: 2px solid #4CAF50;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #2E7D32;
+  font-weight: 600;
+}
+
+/* Health Score Section */
+.health-score-section {
+  text-align: center;
+}
+
+.risk-level-badge {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Weaknesses Section */
+.weakness-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.weakness-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.weakness-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.weakness-card.severity-critical {
+  border-left: 6px solid #EF4444;
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFFFFF 100%);
+}
+
+.weakness-card.severity-moderate {
+  border-left: 6px solid #F59E0B;
+  background: linear-gradient(135deg, #FFF9E8 0%, #FFFFFF 100%);
+}
+
+.weakness-card.severity-low {
+  border-left: 6px solid #10B981;
+  background: linear-gradient(135deg, #E8F5E9 0%, #FFFFFF 100%);
+}
+
+.weakness-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid rgba(255, 107, 157, 0.2);
+}
+
+.weakness-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #FF6B9D 0%, #FFB347 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 1rem;
+  margin-right: 0.8rem;
+}
+
+.weakness-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.weakness-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.weakness-values {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}
+
+.weakness-value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.value-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.value-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.weakness-gap-chart {
+  margin-top: 0.5rem;
+}
+
+.gap-bar-container {
+  width: 100%;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.gap-bar {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.gap-severity-label {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Cluster Section */
+.cluster-info-box {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.05) 0%, rgba(255, 179, 71, 0.05) 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 107, 157, 0.2);
+  margin-bottom: 1.5rem;
+}
+
+/* Gemini Diagnosis Section */
+.gemini-diagnosis-box {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF9F5 100%);
+  padding: 2rem;
+  border-radius: 14px;
+  border: 3px solid #FF1493;
+  box-shadow: 0 8px 24px rgba(255, 20, 147, 0.2);
+}
+
+.diagnosis-content {
+  line-height: 1.8;
+  font-size: 1rem;
+  color: #333;
+}
+
+.diagnosis-content h3 {
+  color: #FF1493;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 900;
+  font-size: 1.3rem;
+}
+
+.diagnosis-content h4 {
+  color: #FF6B9D;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.diagnosis-content p {
+  margin-bottom: 1rem;
+}
+
+.diagnosis-content ul {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.diagnosis-content li {
+  margin-bottom: 0.5rem;
+}
+
+.diagnosis-content strong {
+  color: #FF6B9D;
+  font-weight: 700;
+}
+
+/* Responsive for Early Warning */
+@media (max-width: 768px) {
+  .weakness-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .weakness-values {
+    grid-template-columns: 1fr;
+  }
+
+  .early-warning-section {
+    padding: 1rem;
+  }
+
+  .risk-level-badge {
+    font-size: 1.1rem;
+    padding: 0.6rem 1.5rem;
+  }
+
+  .weakness-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weakness-number {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cluster-info-box {
+    padding: 1rem;
+  }
+
+  .gemini-diagnosis-box {
+    padding: 1rem;
+  }
+
+  .diagnosis-content {
+    font-size: 0.95rem;
+  }
+
+  .weakness-name {
+    font-size: 1rem;
+  }
+
+  .value-number {
+    font-size: 1rem;
+  }
+}

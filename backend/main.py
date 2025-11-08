@@ -22,6 +22,7 @@ from model import credit_model
 from gemini_api import get_gemini_analyzer
 from excel_processor import excel_processor
 from report_generator import ReportGenerator
+from early_warning import early_warning_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -1200,6 +1201,228 @@ async def simulate_scenario_macro(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi mô phỏng kịch bản vĩ mô: {str(e)}")
+
+
+@app.post("/train-early-warning-model")
+async def train_early_warning_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Early Warning System
+
+    Args:
+        file: File Excel chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'label' (0=không vỡ nợ, 1=vỡ nợ)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - num_samples: Số lượng mẫu
+        - feature_importances: Feature importances từ RandomForest
+        - cluster_distribution: Phân bố các cluster
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['label']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Early Warning System
+            result = early_warning_system.train_models(df)
+
+            return {
+                "status": "success",
+                "message": "Early Warning System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Early Warning System: {str(e)}")
+
+
+@app.post("/early-warning-check")
+async def early_warning_check(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    report_period: Optional[str] = Form(None),
+    industry_code: str = Form("manufacturing")
+):
+    """
+    Endpoint kiểm tra cảnh báo rủi ro sớm
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        report_period: Kỳ báo cáo (Quý/6 tháng/Năm) - Optional, chỉ để hiển thị
+        industry_code: Mã ngành ("manufacturing", "export", "retail")
+
+    Returns:
+        Dict chứa:
+        - health_score: Health Score (0-100)
+        - risk_level: Mức rủi ro (Safe/Watch/Warning/Alert)
+        - risk_level_color: Màu sắc
+        - current_pd: PD hiện tại
+        - top_weaknesses: Top 3 điểm yếu
+        - cluster_info: Thông tin cluster
+        - pd_projection: Dự báo PD tương lai
+        - gemini_diagnosis: Báo cáo chẩn đoán từ Gemini AI
+        - feature_importances: Feature importances
+    """
+    try:
+        import json
+
+        # Kiểm tra Early Warning System đã được train chưa
+        if early_warning_system.stacking_model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Early Warning System chưa được train. Vui lòng upload file training data trước."
+            )
+
+        # Kiểm tra mô hình PD đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình PD chưa được huấn luyện. Vui lòng train mô hình trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. TÍNH HEALTH SCORE
+        health_score = early_warning_system.calculate_health_score(indicators)
+
+        # 3. PHÂN LOẠI MỨC RỦI RO
+        risk_info = early_warning_system.classify_risk_level(health_score)
+
+        # 4. TÍNH PD HIỆN TẠI
+        feature_cols = [f'X_{i}' for i in range(1, 15)]
+        X_current = pd.DataFrame([[indicators[col] for col in feature_cols]], columns=feature_cols)
+        prediction = credit_model.predict(X_current)
+        current_pd = prediction['pd_stacking']
+
+        # 5. PHÁT HIỆN ĐIỂM YẾU
+        weaknesses = early_warning_system.detect_weaknesses(indicators)
+
+        # 6. XÁC ĐỊNH VỊ TRÍ CLUSTER
+        cluster_info = early_warning_system.get_cluster_position(indicators)
+
+        # 7. DỰ BÁO PD TƯƠNG LAI (3/6/12 tháng x 3 kịch bản)
+        scenarios = ['recession_mild', 'recession_moderate', 'crisis']
+        time_periods = [3, 6, 12]
+
+        pd_projection = {
+            'current': current_pd
+        }
+
+        for scenario in scenarios:
+            pd_projection[scenario] = {}
+            for months in time_periods:
+                pd_future = early_warning_system.project_future_pd(
+                    indicators=indicators,
+                    months=months,
+                    scenario=scenario,
+                    excel_processor=excel_processor,
+                    industry_code=industry_code
+                )
+                pd_projection[scenario][f'{months}_months'] = pd_future
+
+        # 8. TẠO BÁO CÁO CHẨN ĐOÁN BẰNG GEMINI AI
+        gemini_diagnosis = early_warning_system.generate_gemini_diagnosis(
+            health_score=health_score,
+            risk_info=risk_info,
+            weaknesses=weaknesses,
+            cluster_info=cluster_info,
+            pd_projections=pd_projection,
+            current_pd=current_pd,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        # 9. TRẢ VỀ KẾT QUẢ
+        return {
+            "status": "success",
+            "health_score": health_score,
+            "risk_level": risk_info['risk_level'],
+            "risk_level_color": risk_info['risk_level_color'],
+            "risk_level_icon": risk_info['risk_level_icon'],
+            "risk_level_text": risk_info['risk_level_text'],
+            "current_pd": current_pd,
+            "top_weaknesses": weaknesses,
+            "cluster_info": cluster_info,
+            "pd_projection": pd_projection,
+            "gemini_diagnosis": gemini_diagnosis,
+            "feature_importances": early_warning_system.feature_importances,
+            "report_period": report_period
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra cảnh báo rủi ro: {str(e)}")
 
 
 # ================================================================================================
