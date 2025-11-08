@@ -38,6 +38,8 @@ origins = [
     "http://localhost:5173",      # Vite alternative port
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://localhost:3005",
+    "http://127.0.0.1:3005",
     # Thêm domain production khi deploy:
     # "https://yourdomain.com"
 ]
