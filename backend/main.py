@@ -3,7 +3,7 @@ FastAPI Backend - Hệ thống Đánh giá Rủi ro Tín dụng
 Endpoints: /train, /predict, /predict-from-xlsx, /analyze, /export-report
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from dotenv import load_dotenv
 import os
 
@@ -740,12 +740,12 @@ Hãy trả lời câu hỏi:
 @app.post("/simulate-scenario")
 async def simulate_scenario(
     file: Optional[UploadFile] = File(None),
-    indicators_json: Optional[str] = None,
-    scenario_type: str = "mild",
-    custom_revenue: float = 0,
-    custom_interest: float = 0,
-    custom_roe: float = 0,
-    custom_cr: float = 0
+    indicators_json: Optional[str] = Form(None),
+    scenario_type: str = Form("mild"),
+    custom_revenue: float = Form(0),
+    custom_interest: float = Form(0),
+    custom_roe: float = Form(0),
+    custom_cr: float = Form(0)
 ):
     """
     Endpoint mô phỏng kịch bản xấu - Tính toán PD trước và sau khi áp dụng kịch bản
