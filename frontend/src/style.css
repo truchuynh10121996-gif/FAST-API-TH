@@ -2271,3 +2271,208 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* ========================================
+   💫 PHẦN SO SÁNH PD MỚI - THIẾT KẾ ĐẸP
+   ======================================== */
+
+.pd-change-section {
+  margin: 3rem 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 240, 247, 0.98) 50%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 8px 32px rgba(255, 107, 157, 0.15);
+  border: 2px solid rgba(255, 182, 193, 0.3);
+}
+
+.pd-comparison-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed rgba(255, 182, 193, 0.4);
+}
+
+.pd-comparison-cards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.pd-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fff5f8 100%);
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 6px 24px rgba(255, 107, 157, 0.2);
+  transition: all 0.3s ease;
+  min-width: 280px;
+  border: 2px solid transparent;
+}
+
+.pd-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 36px rgba(255, 107, 157, 0.3);
+}
+
+.pd-before-card {
+  border-color: rgba(46, 125, 50, 0.3);
+  background: linear-gradient(145deg, #f0fff4 0%, #e8fff0 100%);
+}
+
+.pd-after-card {
+  border-color: rgba(220, 53, 69, 0.3);
+  background: linear-gradient(145deg, #fff5f5 0%, #ffe8e8 100%);
+}
+
+.pd-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.pd-card-icon {
+  font-size: 2rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.pd-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.5px;
+}
+
+.pd-card-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #FF6B9D;
+  text-align: center;
+  margin: 1rem 0;
+  text-shadow: 2px 2px 4px rgba(255, 107, 157, 0.2);
+}
+
+.pd-card-label {
+  font-size: 0.95rem;
+  color: var(--text-light);
+  text-align: center;
+  font-weight: 500;
+}
+
+.pd-arrow-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pd-arrow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.pd-change-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  animation: float 2s ease-in-out infinite;
+}
+
+.pd-change-badge .change-icon {
+  font-size: 1.5rem;
+}
+
+.pd-change-badge.mild {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #e65100;
+}
+
+.pd-change-badge.moderate {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #c62828;
+}
+
+.pd-change-badge.severe {
+  background: linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%);
+  color: #ffffff;
+}
+
+.pd-change-badge.positive {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  color: #2e7d32;
+}
+
+/* Nhận xét ngắn gọn */
+.pd-analysis-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg,
+    rgba(255, 249, 232, 0.95) 0%,
+    rgba(255, 243, 224, 0.95) 100%
+  );
+  border-radius: 16px;
+  border-left: 5px solid #FF6B9D;
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.15);
+}
+
+.note-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  animation: float 3s ease-in-out infinite;
+}
+
+.note-content {
+  flex: 1;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-dark);
+}
+
+.note-content strong {
+  color: #FF6B9D;
+  font-weight: 700;
+}
+
+/* Responsive cho phần so sánh PD mới */
+@media (max-width: 768px) {
+  .pd-comparison-cards {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .pd-card {
+    min-width: 100%;
+  }
+
+  .pd-card-value {
+    font-size: 2.5rem;
+  }
+
+  .pd-arrow-container {
+    transform: rotate(90deg);
+    margin: 1rem 0;
+  }
+
+  .pd-analysis-note {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .note-icon {
+    font-size: 2rem;
+  }
+}

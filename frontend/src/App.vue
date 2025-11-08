@@ -858,24 +858,79 @@
               </div>
             </div>
 
-            <!-- % Thay đổi PD -->
-            <div class="pd-change-banner" :class="getPdChangeClass(scenarioResult.pd_change.change_pct)">
-              <div class="pd-change-content">
-                <div class="pd-before-after">
-                  <div>
-                    <span class="label">PD Trước:</span>
-                    <span class="value">{{ (scenarioResult.pd_change.before * 100).toFixed(2) }}%</span>
+            <!-- % Thay đổi PD - Thiết kế mới -->
+            <div class="pd-change-section">
+              <div class="pd-comparison-header">
+                <h3 style="color: #FF6B9D; font-size: 1.5rem; margin: 0;">
+                  💫 Kết quả Mô phỏng Tác động
+                </h3>
+              </div>
+
+              <div class="pd-comparison-cards">
+                <!-- Card Trước -->
+                <div class="pd-card pd-before-card">
+                  <div class="pd-card-header">
+                    <span class="pd-card-icon">🟢</span>
+                    <span class="pd-card-title">Trước kịch bản</span>
                   </div>
-                  <div class="arrow">→</div>
-                  <div>
-                    <span class="label">PD Sau:</span>
-                    <span class="value">{{ (scenarioResult.pd_change.after * 100).toFixed(2) }}%</span>
+                  <div class="pd-card-value">
+                    {{ (scenarioResult.pd_change.before * 100).toFixed(2) }}%
+                  </div>
+                  <div class="pd-card-label">Xác suất vỡ nợ (PD)</div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="pd-arrow-container">
+                  <div class="pd-arrow">
+                    <span style="font-size: 2.5rem; color: #FF6B9D;">→</span>
+                  </div>
+                  <div class="pd-change-badge" :class="getPdChangeClass(scenarioResult.pd_change.change_pct)">
+                    <span class="change-icon">{{ scenarioResult.pd_change.change_pct >= 0 ? '⬆' : '⬇' }}</span>
+                    <span class="change-value">{{ scenarioResult.pd_change.change_pct >= 0 ? '+' : '' }}{{ scenarioResult.pd_change.change_pct }}%</span>
                   </div>
                 </div>
-                <div class="pd-change-indicator">
-                  <span class="change-label">Thay đổi:</span>
-                  <span class="change-value">{{ scenarioResult.pd_change.change_pct >= 0 ? '+' : '' }}{{ scenarioResult.pd_change.change_pct }}%</span>
-                  <span class="change-icon">{{ scenarioResult.pd_change.change_pct >= 0 ? '📈' : '📉' }}</span>
+
+                <!-- Card Sau -->
+                <div class="pd-card pd-after-card">
+                  <div class="pd-card-header">
+                    <span class="pd-card-icon">🔴</span>
+                    <span class="pd-card-title">Sau kịch bản</span>
+                  </div>
+                  <div class="pd-card-value">
+                    {{ (scenarioResult.pd_change.after * 100).toFixed(2) }}%
+                  </div>
+                  <div class="pd-card-label">Xác suất vỡ nợ (PD)</div>
+                </div>
+              </div>
+
+              <!-- Nhận xét ngắn gọn -->
+              <div class="pd-analysis-note">
+                <div class="note-icon">💡</div>
+                <div class="note-content">
+                  <strong>Nhận xét:</strong>
+                  <span v-if="scenarioResult.pd_change.change_pct > 50">
+                    Kịch bản <strong>{{ scenarioResult.scenario_info.name }}</strong> tác động <strong style="color: #dc3545;">CỰC KỲ NGHIÊM TRỌNG</strong> đến khả năng trả nợ.
+                    Xác suất vỡ nợ tăng <strong>{{ scenarioResult.pd_change.change_pct }}%</strong>, cần <strong>xem xét kỹ lưỡng</strong> trước khi cấp tín dụng.
+                  </span>
+                  <span v-else-if="scenarioResult.pd_change.change_pct > 20">
+                    Kịch bản <strong>{{ scenarioResult.scenario_info.name }}</strong> có tác động <strong style="color: #fd7e14;">ĐÁNG KỂ</strong> đến khả năng trả nợ.
+                    PD tăng <strong>{{ scenarioResult.pd_change.change_pct }}%</strong>, khuyến nghị <strong>thận trọng</strong> và có biện pháp giảm thiểu rủi ro.
+                  </span>
+                  <span v-else-if="scenarioResult.pd_change.change_pct > 5">
+                    Kịch bản <strong>{{ scenarioResult.scenario_info.name }}</strong> tác động <strong style="color: #ffc107;">VỪA PHẢI</strong> đến rủi ro vỡ nợ.
+                    PD tăng <strong>{{ scenarioResult.pd_change.change_pct }}%</strong>, doanh nghiệp vẫn <strong>chịu đựng được</strong> nhưng cần theo dõi.
+                  </span>
+                  <span v-else-if="scenarioResult.pd_change.change_pct > 0">
+                    Kịch bản <strong>{{ scenarioResult.scenario_info.name }}</strong> có tác động <strong style="color: #28a745;">NHẸ</strong> đến khả năng trả nợ.
+                    PD chỉ tăng <strong>{{ scenarioResult.pd_change.change_pct }}%</strong>, doanh nghiệp <strong>khá ổn định</strong> trong điều kiện bất lợi.
+                  </span>
+                  <span v-else-if="scenarioResult.pd_change.change_pct === 0">
+                    Không có thay đổi đáng kể về PD. Doanh nghiệp <strong>duy trì ổn định</strong>.
+                  </span>
+                  <span v-else>
+                    Kịch bản <strong>{{ scenarioResult.scenario_info.name }}</strong> dẫn đến <strong style="color: #28a745;">CẢI THIỆN</strong> PD (giảm {{ Math.abs(scenarioResult.pd_change.change_pct) }}%).
+                    Đây là dấu hiệu <strong>tích cực</strong>.
+                  </span>
                 </div>
               </div>
             </div>
@@ -945,15 +1000,15 @@
             <!-- 2 Biểu đồ so sánh PD (nằm ngang) -->
             <div style="margin: 3rem 0;">
               <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
-                📈 Biểu đồ So sánh PD từ 4 Models
+                📊 So sánh PD Trước và Sau Biến động Kinh tế
               </h3>
               <div class="charts-comparison-container">
                 <div class="chart-wrapper">
-                  <h4 class="chart-title">Trước kịch bản</h4>
+                  <h4 class="chart-title">🟢 Trước kịch bản (Bình thường)</h4>
                   <RiskChart :prediction="scenarioResult.prediction_before" />
                 </div>
                 <div class="chart-wrapper">
-                  <h4 class="chart-title">Sau kịch bản</h4>
+                  <h4 class="chart-title">🔴 Sau kịch bản ({{ scenarioResult.scenario_info.name }})</h4>
                   <RiskChart :prediction="scenarioResult.prediction_after" />
                 </div>
               </div>
@@ -976,41 +1031,10 @@
               <div class="analysis-content" style="white-space: pre-wrap;">{{ scenarioAnalysis }}</div>
             </div>
 
-            <!-- Chatbot -->
-            <div v-if="scenarioAnalysis" style="margin-top: 2rem;">
-              <button @click="showScenarioChatbot = !showScenarioChatbot" class="btn btn-chat">
-                {{ showScenarioChatbot ? '❌ Đóng Chatbot' : '💬 Hỏi thêm về phân tích này' }}
-              </button>
-
-              <div v-if="showScenarioChatbot" class="chatbot-container">
-                <div class="chat-messages">
-                  <div v-if="scenarioChatMessages.length === 0" class="chat-empty">
-                    Xin chào! Tôi có thể giúp bạn hiểu rõ hơn về kết quả mô phỏng kịch bản. Hãy đặt câu hỏi!
-                  </div>
-                  <div
-                    v-for="(msg, index) in scenarioChatMessages"
-                    :key="index"
-                    :class="['chat-message', msg.role === 'user' ? 'user' : 'assistant']"
-                  >
-                    <div class="message-content">{{ msg.content }}</div>
-                  </div>
-                  <div v-if="isScenarioChatLoading" class="chat-message assistant">
-                    <div class="message-content">⏳ Đang suy nghĩ...</div>
-                  </div>
-                </div>
-                <div class="chat-input-container">
-                  <input
-                    v-model="scenarioChatInput"
-                    @keyup.enter="sendScenarioChatMessage"
-                    type="text"
-                    placeholder="Nhập câu hỏi của bạn..."
-                    class="chat-input-field"
-                  />
-                  <button @click="sendScenarioChatMessage" class="chat-send-button" :disabled="!scenarioChatInput.trim() || isScenarioChatLoading">
-                    ➤
-                  </button>
-                </div>
-              </div>
+            <!-- Chatbot Trigger - Hiện sau khi có phân tích -->
+            <div v-if="scenarioAnalysis && !showScenarioChatbot" class="chatbot-trigger">
+              <div class="pointer-hand">👉</div>
+              <div class="trigger-text" @click="openScenarioChatbot">Hỏi thêm chi tiết tại đây...</div>
             </div>
 
             <!-- Nút xuất báo cáo Word -->
@@ -1020,6 +1044,48 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Scenario Chatbot Component - Nằm ngoài card -->
+      <div v-if="showScenarioChatbot && activeTab === 'scenario'" class="chatbot-container">
+        <div class="chatbot-header">
+          <div class="chatbot-title">
+            <span class="chatbot-icon">🤖</span>
+            <span>Trợ lý ảo Agribank</span>
+          </div>
+          <button @click="closeScenarioChatbot" class="chatbot-close">✕</button>
+        </div>
+        <div class="chatbot-messages">
+          <div v-if="scenarioChatMessages.length === 0" class="chatbot-welcome">
+            <p>👋 Xin chào! Tôi là Trợ lý ảo Agribank.</p>
+            <p>Bạn có thể hỏi thêm về phân tích mô phỏng kịch bản vừa rồi.</p>
+          </div>
+          <div
+            v-for="(message, index) in scenarioChatMessages"
+            :key="index"
+            class="chat-message"
+            :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+          >
+            {{ message.content }}
+          </div>
+          <div v-if="isScenarioChatLoading" class="chat-loading">
+            <span class="loading-dot"></span>
+            <span class="loading-dot"></span>
+            <span class="loading-dot"></span>
+          </div>
+        </div>
+        <div class="chatbot-input">
+          <input
+            v-model="scenarioChatInput"
+            @keyup.enter="sendScenarioChatMessage"
+            type="text"
+            placeholder="Nhập câu hỏi của bạn..."
+            class="chat-input-field"
+          />
+          <button @click="sendScenarioChatMessage" class="chat-send-button" :disabled="!scenarioChatInput.trim() || isScenarioChatLoading">
+            ➤
+          </button>
         </div>
       </div>
 
@@ -1841,6 +1907,15 @@ export default {
       }
     }
 
+    // Scenario Chatbot functionality
+    const openScenarioChatbot = () => {
+      showScenarioChatbot.value = true
+    }
+
+    const closeScenarioChatbot = () => {
+      showScenarioChatbot.value = false
+    }
+
     const sendScenarioChatMessage = async () => {
       if (!scenarioChatInput.value.trim() || isScenarioChatLoading.value) return
 
@@ -2058,6 +2133,8 @@ export default {
       canRunSimulation,
       runScenarioSimulation,
       analyzeScenario,
+      openScenarioChatbot,
+      closeScenarioChatbot,
       sendScenarioChatMessage,
       exportScenarioReport,
       getPdChangeClass,
