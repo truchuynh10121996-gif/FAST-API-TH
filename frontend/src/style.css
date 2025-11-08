@@ -1925,3 +1925,349 @@ body {
     right: 20px;
   }
 }
+
+/* ======================================================================================================
+   SCENARIO SIMULATION TAB - MÔ PHỎNG KỊCH BẢN XẤU
+====================================================================================================== */
+
+/* Radio group for data source selection */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: var(--white);
+  border: 2px solid var(--pastel-pink-light);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.radio-label:hover {
+  border-color: var(--text-pink);
+  background: var(--pastel-pink-main);
+  transform: translateX(5px);
+}
+
+.radio-label input[type="radio"] {
+  margin-right: 1rem;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"]:checked + span {
+  color: var(--text-pink);
+  font-weight: 600;
+}
+
+/* Scenario cards */
+.scenario-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.scenario-card {
+  background: var(--white);
+  border: 3px solid var(--pastel-pink-light);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.scenario-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--text-pink);
+}
+
+.scenario-card.selected {
+  border-color: var(--text-pink);
+  background: linear-gradient(135deg, var(--pastel-pink-main), var(--white));
+  box-shadow: var(--glow-pink);
+}
+
+.scenario-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.scenario-title {
+  color: var(--text-dark);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.scenario-details {
+  list-style: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.scenario-details li {
+  margin: 0.5rem 0;
+}
+
+.highlight-negative {
+  color: #e53935;
+  font-weight: 600;
+}
+
+.scenario-hint {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Custom scenario inputs */
+.custom-scenario-inputs {
+  background: var(--pastel-pink-main);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.input-group input[type="number"] {
+  padding: 0.75rem;
+  border: 2px solid var(--pastel-pink-light);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.input-group input[type="number"]:focus {
+  outline: none;
+  border-color: var(--text-pink);
+  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+}
+
+/* Scenario info banner */
+.scenario-info-banner {
+  background: linear-gradient(135deg, var(--pastel-pink-light), var(--pastel-purple));
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.scenario-info-banner h3 {
+  color: var(--text-pink);
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.scenario-changes {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.scenario-changes span {
+  background: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+/* PD Change banner */
+.pd-change-banner {
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border: 3px solid;
+}
+
+.pd-change-low {
+  background: var(--risk-low);
+  border-color: var(--risk-low-text);
+}
+
+.pd-change-moderate {
+  background: var(--risk-medium);
+  border-color: var(--risk-medium-text);
+}
+
+.pd-change-high {
+  background: var(--risk-high);
+  border-color: var(--risk-high-text);
+}
+
+.pd-change-critical {
+  background: var(--risk-very-high);
+  border-color: var(--risk-very-high-text);
+}
+
+.pd-change-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.pd-before-after {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pd-before-after .label {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.pd-before-after .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-pink);
+}
+
+.pd-before-after .arrow {
+  font-size: 2rem;
+  color: var(--text-light);
+}
+
+.pd-change-indicator {
+  text-align: right;
+}
+
+.change-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 0.3rem;
+}
+
+.change-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.change-icon {
+  font-size: 1.5rem;
+  margin-left: 0.5rem;
+}
+
+/* Comparison tables container */
+.comparison-tables-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+}
+
+.comparison-table-wrapper {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.pd-summary {
+  background: var(--pastel-pink-main);
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  color: var(--text-dark);
+}
+
+.change-cell {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.change-up {
+  color: #c62828;
+}
+
+.change-down {
+  color: #2e7d32;
+}
+
+.change-neutral {
+  color: var(--text-light);
+}
+
+/* Charts comparison container */
+.charts-comparison-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.chart-wrapper {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.chart-title {
+  color: var(--text-pink);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Responsive for scenario tab */
+@media (max-width: 768px) {
+  .scenario-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-tables-container {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-comparison-container {
+    grid-template-columns: 1fr;
+  }
+
+  .pd-change-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .pd-change-indicator {
+    text-align: center;
+  }
+
+  .scenario-changes {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

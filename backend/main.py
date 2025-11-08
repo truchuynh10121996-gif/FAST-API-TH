@@ -737,6 +737,238 @@ Hãy trả lời câu hỏi:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý câu hỏi: {str(e)}")
 
 
+@app.post("/simulate-scenario")
+async def simulate_scenario(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = None,
+    scenario_type: str = "mild",
+    custom_revenue: float = 0,
+    custom_interest: float = 0,
+    custom_roe: float = 0,
+    custom_cr: float = 0
+):
+    """
+    Endpoint mô phỏng kịch bản xấu - Tính toán PD trước và sau khi áp dụng kịch bản
+
+    Args:
+        file: File XLSX (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        scenario_type: Loại kịch bản ("mild", "moderate", "crisis", "custom")
+        custom_revenue: % thay đổi doanh thu (chỉ dùng khi scenario_type="custom")
+        custom_interest: % thay đổi chi phí lãi vay (chỉ dùng khi scenario_type="custom")
+        custom_roe: % thay đổi ROE (chỉ dùng khi scenario_type="custom")
+        custom_cr: % thay đổi CR (chỉ dùng khi scenario_type="custom")
+
+    Returns:
+        Dict chứa:
+        - indicators_before: 14 chỉ số trước khi áp kịch bản
+        - indicators_after: 14 chỉ số sau khi áp kịch bản
+        - prediction_before: PD trước khi áp kịch bản
+        - prediction_after: PD sau khi áp kịch bản
+        - pd_change_pct: % thay đổi PD
+        - scenario_info: Thông tin về kịch bản đã áp dụng
+    """
+    try:
+        import json
+
+        # Kiểm tra mô hình đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình chưa được huấn luyện. Vui lòng upload file CSV để huấn luyện trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ BAN ĐẦU (indicators_before)
+        indicators_before = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators_before = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators_before = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. XÁC ĐỊNH % BIẾN ĐỘNG THEO KỊCH BẢN
+        scenario_configs = {
+            "mild": {
+                "name": "🟠 Kinh tế giảm nhẹ",
+                "revenue_change": -5,
+                "interest_change": 5,
+                "roe_change": -5,
+                "cr_change": -5
+            },
+            "moderate": {
+                "name": "🔴 Cú sốc kinh tế trung bình",
+                "revenue_change": -10,
+                "interest_change": 10,
+                "roe_change": -10,
+                "cr_change": -8
+            },
+            "crisis": {
+                "name": "⚫ Khủng hoảng",
+                "revenue_change": -20,
+                "interest_change": 15,
+                "roe_change": -20,
+                "cr_change": -12
+            },
+            "custom": {
+                "name": "🟡 Tùy chọn biến động",
+                "revenue_change": custom_revenue,
+                "interest_change": custom_interest,
+                "roe_change": custom_roe,
+                "cr_change": custom_cr
+            }
+        }
+
+        if scenario_type not in scenario_configs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Loại kịch bản không hợp lệ. Chọn: {', '.join(scenario_configs.keys())}"
+            )
+
+        scenario = scenario_configs[scenario_type]
+
+        # 3. TÍNH 14 CHỈ SỐ SAU KHI ÁP KỊCH BẢN (indicators_after)
+        indicators_after = excel_processor.simulate_scenario_indicators(
+            original_indicators=indicators_before,
+            revenue_change_pct=scenario["revenue_change"],
+            interest_change_pct=scenario["interest_change"],
+            roe_change_pct=scenario["roe_change"],
+            cr_change_pct=scenario["cr_change"]
+        )
+
+        # 4. DỰ BÁO PD TRƯỚC VÀ SAU
+        # Dự báo PD trước khi áp kịch bản
+        X_before = pd.DataFrame([indicators_before])
+        prediction_before = credit_model.predict(X_before)
+
+        # Dự báo PD sau khi áp kịch bản
+        X_after = pd.DataFrame([indicators_after])
+        prediction_after = credit_model.predict(X_after)
+
+        # 5. TÍNH % THAY ĐỔI PD
+        pd_before = prediction_before["pd_stacking"]
+        pd_after = prediction_after["pd_stacking"]
+        pd_change_pct = ((pd_after - pd_before) / pd_before * 100) if pd_before != 0 else 0
+
+        # 6. CHUẨN BỊ KẾT QUẢ TRẢ VỀ
+        # Chuyển đổi indicators thành list có tên
+        def indicators_to_list(indicators_dict):
+            indicator_names = {
+                'X_1': 'Hệ số biên lợi nhuận gộp',
+                'X_2': 'Hệ số biên lợi nhuận trước thuế',
+                'X_3': 'Tỷ suất lợi nhuận trước thuế trên tổng tài sản (ROA)',
+                'X_4': 'Tỷ suất lợi nhuận trước thuế trên vốn chủ sở hữu (ROE)',
+                'X_5': 'Hệ số nợ trên tài sản',
+                'X_6': 'Hệ số nợ trên vốn chủ sở hữu',
+                'X_7': 'Khả năng thanh toán hiện hành',
+                'X_8': 'Khả năng thanh toán nhanh',
+                'X_9': 'Hệ số khả năng trả lãi',
+                'X_10': 'Hệ số khả năng trả nợ gốc',
+                'X_11': 'Hệ số khả năng tạo tiền trên vốn chủ sở hữu',
+                'X_12': 'Vòng quay hàng tồn kho',
+                'X_13': 'Kỳ thu tiền bình quân',
+                'X_14': 'Hiệu suất sử dụng tài sản'
+            }
+            result = []
+            for key, value in indicators_dict.items():
+                result.append({
+                    'code': key,
+                    'name': indicator_names[key],
+                    'value': value
+                })
+            return result
+
+        return {
+            "status": "success",
+            "scenario_info": {
+                "type": scenario_type,
+                "name": scenario["name"],
+                "changes": {
+                    "revenue": scenario["revenue_change"],
+                    "interest": scenario["interest_change"],
+                    "roe": scenario["roe_change"],
+                    "cr": scenario["cr_change"]
+                }
+            },
+            "indicators_before": indicators_to_list(indicators_before),
+            "indicators_before_dict": indicators_before,
+            "indicators_after": indicators_to_list(indicators_after),
+            "indicators_after_dict": indicators_after,
+            "prediction_before": prediction_before,
+            "prediction_after": prediction_after,
+            "pd_change": {
+                "before": pd_before,
+                "after": pd_after,
+                "change_pct": round(pd_change_pct, 2),
+                "change_absolute": round(pd_after - pd_before, 6)
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi mô phỏng kịch bản: {str(e)}")
+
+
+@app.post("/analyze-scenario")
+async def analyze_scenario(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích kết quả mô phỏng kịch bản bằng Gemini API
+
+    Args:
+        request_data: Dict chứa kết quả mô phỏng kịch bản
+
+    Returns:
+        Dict chứa kết quả phân tích từ Gemini
+    """
+    try:
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Phân tích kịch bản
+        analysis = analyzer.analyze_scenario_simulation(request_data)
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích kịch bản bằng Gemini: {str(e)}")
+
+
 # ================================================================================================
 # MAIN
 # ================================================================================================

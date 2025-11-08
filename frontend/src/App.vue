@@ -51,6 +51,13 @@
         📊 Dashboard Tài Chính
       </button>
       <button
+        @click="activeTab = 'scenario'"
+        class="tab-button"
+        :class="{ active: activeTab === 'scenario' }"
+      >
+        ⚠️ Mô phỏng kịch bản xấu
+      </button>
+      <button
         @click="activeTab = 'train'"
         class="tab-button"
         :class="{ active: activeTab === 'train' }"
@@ -701,6 +708,321 @@
         </div>
       </div>
 
+      <!-- ✅ TAB CONTENT: Mô phỏng kịch bản xấu -->
+      <div v-if="activeTab === 'scenario'" class="tab-content">
+        <div class="card">
+          <h2 class="card-title">⚠️ Mô phỏng Kịch bản Biến động Kinh tế</h2>
+
+          <!-- Ghi chú hướng dẫn -->
+          <div class="info-note">
+            <span class="note-icon">📝</span>
+            <span class="note-text">Mô phỏng tác động của các kịch bản kinh tế xấu đến xác suất vỡ nợ (PD) và phân tích khả năng chịu đựng của doanh nghiệp</span>
+          </div>
+
+          <!-- Bước 1: Chọn nguồn dữ liệu -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #FF6B9D;">📁 Bước 1: Chọn nguồn dữ liệu</h3>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" value="from_tab" v-model="scenarioDataSource" />
+                <span>Sử dụng dữ liệu từ Tab "Dự Báo PD"</span>
+                <span v-if="!indicatorsDict" style="color: #999; font-size: 0.85rem; margin-left: 0.5rem;">(Chưa có dữ liệu - Vui lòng dự báo PD trước)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" value="new_file" v-model="scenarioDataSource" />
+                <span>Tải file XLSX mới để mô phỏng</span>
+              </label>
+            </div>
+
+            <!-- Upload file mới (nếu chọn new_file) -->
+            <div v-if="scenarioDataSource === 'new_file'" style="margin-top: 1rem;">
+              <div class="upload-area" @click="$refs.scenarioFileInput.click()">
+                <div class="upload-icon">📊</div>
+                <p class="upload-text">{{ scenarioFileName || 'Tải lên file XLSX của doanh nghiệp' }}</p>
+                <p class="upload-hint">File XLSX phải có 3 sheets: CDKT, BCTN, LCTT</p>
+              </div>
+              <input
+                ref="scenarioFileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleScenarioFile"
+                style="display: none"
+              />
+            </div>
+          </div>
+
+          <!-- Bước 2: Chọn kịch bản -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: #FF6B9D;">⚡ Bước 2: Chọn Kịch bản Biến động</h3>
+            <div class="scenario-cards">
+              <div
+                class="scenario-card"
+                :class="{ selected: selectedScenario === 'mild' }"
+                @click="selectedScenario = 'mild'"
+              >
+                <div class="scenario-icon">🟠</div>
+                <h4 class="scenario-title">Kinh tế giảm nhẹ</h4>
+                <ul class="scenario-details">
+                  <li>Doanh thu thuần <span class="highlight-negative">↓5%</span></li>
+                  <li>Chi phí lãi vay <span class="highlight-negative">↑5%</span></li>
+                  <li>ROE <span class="highlight-negative">↓5%</span></li>
+                  <li>CR <span class="highlight-negative">↓5%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card"
+                :class="{ selected: selectedScenario === 'moderate' }"
+                @click="selectedScenario = 'moderate'"
+              >
+                <div class="scenario-icon">🔴</div>
+                <h4 class="scenario-title">Cú sốc kinh tế trung bình</h4>
+                <ul class="scenario-details">
+                  <li>Doanh thu thuần <span class="highlight-negative">↓10%</span></li>
+                  <li>Chi phí lãi vay <span class="highlight-negative">↑10%</span></li>
+                  <li>ROE <span class="highlight-negative">↓10%</span></li>
+                  <li>CR <span class="highlight-negative">↓8%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card"
+                :class="{ selected: selectedScenario === 'crisis' }"
+                @click="selectedScenario = 'crisis'"
+              >
+                <div class="scenario-icon">⚫</div>
+                <h4 class="scenario-title">Khủng hoảng</h4>
+                <ul class="scenario-details">
+                  <li>Doanh thu thuần <span class="highlight-negative">↓20%</span></li>
+                  <li>Chi phí lãi vay <span class="highlight-negative">↑15%</span></li>
+                  <li>ROE <span class="highlight-negative">↓20%</span></li>
+                  <li>CR <span class="highlight-negative">↓12%</span></li>
+                </ul>
+              </div>
+
+              <div
+                class="scenario-card"
+                :class="{ selected: selectedScenario === 'custom' }"
+                @click="selectedScenario = 'custom'"
+              >
+                <div class="scenario-icon">🟡</div>
+                <h4 class="scenario-title">Tùy chọn biến động</h4>
+                <p class="scenario-hint">Tự điều chỉnh % biến động</p>
+              </div>
+            </div>
+
+            <!-- Custom scenario inputs -->
+            <div v-if="selectedScenario === 'custom'" class="custom-scenario-inputs">
+              <h4 style="margin-bottom: 1rem;">Nhập tỷ lệ biến động (% âm = giảm, % dương = tăng):</h4>
+              <div class="input-grid">
+                <div class="input-group">
+                  <label>Doanh thu thuần (%):</label>
+                  <input type="number" v-model.number="customRevenue" step="0.1" placeholder="-5" />
+                </div>
+                <div class="input-group">
+                  <label>Chi phí lãi vay (%):</label>
+                  <input type="number" v-model.number="customInterest" step="0.1" placeholder="+5" />
+                </div>
+                <div class="input-group">
+                  <label>ROE (%):</label>
+                  <input type="number" v-model.number="customRoe" step="0.1" placeholder="-5" />
+                </div>
+                <div class="input-group">
+                  <label>Current Ratio (%):</label>
+                  <input type="number" v-model.number="customCr" step="0.1" placeholder="-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nút bắt đầu mô phỏng -->
+          <button
+            @click="runScenarioSimulation"
+            class="btn btn-primary"
+            :disabled="!canRunSimulation || isSimulating"
+            style="width: 100%; margin-bottom: 2rem;"
+          >
+            {{ isSimulating ? '⏳ Đang mô phỏng...' : '🎯 Bắt đầu Mô phỏng' }}
+          </button>
+
+          <!-- Kết quả mô phỏng -->
+          <div v-if="scenarioResult">
+            <!-- Thông tin kịch bản -->
+            <div class="scenario-info-banner">
+              <h3>{{ scenarioResult.scenario_info.name }}</h3>
+              <div class="scenario-changes">
+                <span>Doanh thu: {{ scenarioResult.scenario_info.changes.revenue >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.revenue }}%</span>
+                <span>Lãi vay: {{ scenarioResult.scenario_info.changes.interest >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.interest }}%</span>
+                <span>ROE: {{ scenarioResult.scenario_info.changes.roe >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.roe }}%</span>
+                <span>CR: {{ scenarioResult.scenario_info.changes.cr >= 0 ? '+' : '' }}{{ scenarioResult.scenario_info.changes.cr }}%</span>
+              </div>
+            </div>
+
+            <!-- % Thay đổi PD -->
+            <div class="pd-change-banner" :class="getPdChangeClass(scenarioResult.pd_change.change_pct)">
+              <div class="pd-change-content">
+                <div class="pd-before-after">
+                  <div>
+                    <span class="label">PD Trước:</span>
+                    <span class="value">{{ (scenarioResult.pd_change.before * 100).toFixed(2) }}%</span>
+                  </div>
+                  <div class="arrow">→</div>
+                  <div>
+                    <span class="label">PD Sau:</span>
+                    <span class="value">{{ (scenarioResult.pd_change.after * 100).toFixed(2) }}%</span>
+                  </div>
+                </div>
+                <div class="pd-change-indicator">
+                  <span class="change-label">Thay đổi:</span>
+                  <span class="change-value">{{ scenarioResult.pd_change.change_pct >= 0 ? '+' : '' }}{{ scenarioResult.pd_change.change_pct }}%</span>
+                  <span class="change-icon">{{ scenarioResult.pd_change.change_pct >= 0 ? '📈' : '📉' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 Bảng so sánh nằm ngang -->
+            <div style="margin: 3rem 0;">
+              <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
+                📊 So sánh 14 Chỉ số Tài chính (Trước / Sau kịch bản)
+              </h3>
+              <div class="comparison-tables-container">
+                <!-- Bảng Trước kịch bản -->
+                <div class="comparison-table-wrapper">
+                  <h4 class="table-subtitle">Trước kịch bản (Bình thường)</h4>
+                  <table class="indicators-table">
+                    <thead>
+                      <tr>
+                        <th>Chỉ số</th>
+                        <th>Giá trị</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="indicator in scenarioResult.indicators_before" :key="indicator.code">
+                        <td>
+                          <div class="indicator-code-cell">{{ indicator.code }}</div>
+                          <div class="indicator-name-cell">{{ indicator.name }}</div>
+                        </td>
+                        <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="pd-summary">
+                    <strong>PD (Stacking):</strong> {{ (scenarioResult.prediction_before.pd_stacking * 100).toFixed(2) }}%
+                  </div>
+                </div>
+
+                <!-- Bảng Sau kịch bản -->
+                <div class="comparison-table-wrapper">
+                  <h4 class="table-subtitle">Sau kịch bản ({{ scenarioResult.scenario_info.name }})</h4>
+                  <table class="indicators-table">
+                    <thead>
+                      <tr>
+                        <th>Chỉ số</th>
+                        <th>Giá trị</th>
+                        <th>Thay đổi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(indicator, index) in scenarioResult.indicators_after" :key="indicator.code">
+                        <td>
+                          <div class="indicator-code-cell">{{ indicator.code }}</div>
+                          <div class="indicator-name-cell">{{ indicator.name }}</div>
+                        </td>
+                        <td class="indicator-value-cell">{{ indicator.value.toFixed(4) }}</td>
+                        <td class="change-cell" :class="getChangeClass(indicator.value, scenarioResult.indicators_before[index].value)">
+                          {{ getChangeText(indicator.value, scenarioResult.indicators_before[index].value) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="pd-summary">
+                    <strong>PD (Stacking):</strong> {{ (scenarioResult.prediction_after.pd_stacking * 100).toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 Biểu đồ so sánh PD (nằm ngang) -->
+            <div style="margin: 3rem 0;">
+              <h3 style="margin-bottom: 1.5rem; color: #FF6B9D; text-align: center; font-size: 1.6rem;">
+                📈 Biểu đồ So sánh PD từ 4 Models
+              </h3>
+              <div class="charts-comparison-container">
+                <div class="chart-wrapper">
+                  <h4 class="chart-title">Trước kịch bản</h4>
+                  <RiskChart :prediction="scenarioResult.prediction_before" />
+                </div>
+                <div class="chart-wrapper">
+                  <h4 class="chart-title">Sau kịch bản</h4>
+                  <RiskChart :prediction="scenarioResult.prediction_after" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Nút phân tích Gemini -->
+            <button
+              v-if="!scenarioAnalysis"
+              @click="analyzeScenario"
+              class="btn btn-secondary"
+              :disabled="isAnalyzingScenario"
+              style="width: 100%; margin: 2rem 0;"
+            >
+              {{ isAnalyzingScenario ? '⏳ Đang phân tích...' : '🤖 Phân tích chuyên sâu bằng Gemini AI' }}
+            </button>
+
+            <!-- Kết quả phân tích Gemini -->
+            <div v-if="scenarioAnalysis" class="gemini-analysis-section">
+              <h3 style="margin-bottom: 1rem; color: #FF6B9D;">🤖 Phân tích Chuyên sâu từ Gemini AI</h3>
+              <div class="analysis-content" style="white-space: pre-wrap;">{{ scenarioAnalysis }}</div>
+            </div>
+
+            <!-- Chatbot -->
+            <div v-if="scenarioAnalysis" style="margin-top: 2rem;">
+              <button @click="showScenarioChatbot = !showScenarioChatbot" class="btn btn-chat">
+                {{ showScenarioChatbot ? '❌ Đóng Chatbot' : '💬 Hỏi thêm về phân tích này' }}
+              </button>
+
+              <div v-if="showScenarioChatbot" class="chatbot-container">
+                <div class="chat-messages">
+                  <div v-if="scenarioChatMessages.length === 0" class="chat-empty">
+                    Xin chào! Tôi có thể giúp bạn hiểu rõ hơn về kết quả mô phỏng kịch bản. Hãy đặt câu hỏi!
+                  </div>
+                  <div
+                    v-for="(msg, index) in scenarioChatMessages"
+                    :key="index"
+                    :class="['chat-message', msg.role === 'user' ? 'user' : 'assistant']"
+                  >
+                    <div class="message-content">{{ msg.content }}</div>
+                  </div>
+                  <div v-if="isScenarioChatLoading" class="chat-message assistant">
+                    <div class="message-content">⏳ Đang suy nghĩ...</div>
+                  </div>
+                </div>
+                <div class="chat-input-container">
+                  <input
+                    v-model="scenarioChatInput"
+                    @keyup.enter="sendScenarioChatMessage"
+                    type="text"
+                    placeholder="Nhập câu hỏi của bạn..."
+                    class="chat-input-field"
+                  />
+                  <button @click="sendScenarioChatMessage" class="chat-send-button" :disabled="!scenarioChatInput.trim() || isScenarioChatLoading">
+                    ➤
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nút xuất báo cáo Word -->
+            <div v-if="scenarioAnalysis" style="margin-top: 2rem; text-align: center;">
+              <button @click="exportScenarioReport" class="btn btn-export" :disabled="isExportingScenario">
+                {{ isExportingScenario ? '⏳ Đang xuất...' : '📄 Xuất Báo cáo Word' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ✅ TAB CONTENT: Huấn luyện Mô hình -->
       <div v-if="activeTab === 'train'" class="tab-content">
         <div class="card">
@@ -830,6 +1152,25 @@ export default {
     const pdAnalysisIndicators = ref(null)
     const pdAnalysisCharts = ref(null)
     const pdAnalysisResult = ref('')
+
+    // Scenario Simulation - NEW FEATURE
+    const scenarioDataSource = ref('from_tab')
+    const scenarioFile = ref(null)
+    const scenarioFileName = ref('')
+    const selectedScenario = ref('mild')
+    const customRevenue = ref(-5)
+    const customInterest = ref(5)
+    const customRoe = ref(-5)
+    const customCr = ref(-5)
+    const isSimulating = ref(false)
+    const scenarioResult = ref(null)
+    const isAnalyzingScenario = ref(false)
+    const scenarioAnalysis = ref('')
+    const showScenarioChatbot = ref(false)
+    const scenarioChatMessages = ref([])
+    const scenarioChatInput = ref('')
+    const isScenarioChatLoading = ref(false)
+    const isExportingScenario = ref(false)
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -1417,6 +1758,192 @@ export default {
       }
     }
 
+    // ================================================================================================
+    // SCENARIO SIMULATION METHODS
+    // ================================================================================================
+
+    const handleScenarioFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        scenarioFile.value = file
+        scenarioFileName.value = file.name
+      }
+    }
+
+    const canRunSimulation = computed(() => {
+      if (scenarioDataSource.value === 'from_tab') {
+        return indicatorsDict.value !== null
+      } else {
+        return scenarioFile.value !== null
+      }
+    })
+
+    const runScenarioSimulation = async () => {
+      if (!canRunSimulation.value) return
+
+      isSimulating.value = true
+      scenarioResult.value = null
+      scenarioAnalysis.value = ''
+      showScenarioChatbot.value = false
+      scenarioChatMessages.value = []
+
+      try {
+        const formData = new FormData()
+
+        // Thêm dữ liệu tùy theo nguồn
+        if (scenarioDataSource.value === 'new_file') {
+          formData.append('file', scenarioFile.value)
+        } else {
+          // Sử dụng dữ liệu từ Tab Dự báo PD
+          formData.append('indicators_json', JSON.stringify(indicatorsDict.value))
+        }
+
+        // Thêm thông tin kịch bản
+        formData.append('scenario_type', selectedScenario.value)
+
+        if (selectedScenario.value === 'custom') {
+          formData.append('custom_revenue', customRevenue.value.toString())
+          formData.append('custom_interest', customInterest.value.toString())
+          formData.append('custom_roe', customRoe.value.toString())
+          formData.append('custom_cr', customCr.value.toString())
+        }
+
+        const response = await axios.post(`${API_BASE}/simulate-scenario`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        scenarioResult.value = response.data
+        console.log('✅ Mô phỏng kịch bản thành công:', response.data)
+      } catch (error) {
+        console.error('❌ Lỗi khi mô phỏng kịch bản:', error)
+        alert(error.response?.data?.detail || 'Lỗi khi mô phỏng kịch bản. Vui lòng thử lại.')
+      } finally {
+        isSimulating.value = false
+      }
+    }
+
+    const analyzeScenario = async () => {
+      if (!scenarioResult.value) return
+
+      isAnalyzingScenario.value = true
+
+      try {
+        const response = await axios.post(`${API_BASE}/analyze-scenario`, scenarioResult.value)
+        scenarioAnalysis.value = response.data.analysis
+        console.log('✅ Phân tích kịch bản thành công')
+      } catch (error) {
+        console.error('❌ Lỗi khi phân tích kịch bản:', error)
+        alert('Lỗi khi phân tích. Vui lòng kiểm tra GEMINI_API_KEY và thử lại.')
+      } finally {
+        isAnalyzingScenario.value = false
+      }
+    }
+
+    const sendScenarioChatMessage = async () => {
+      if (!scenarioChatInput.value.trim() || isScenarioChatLoading.value) return
+
+      const userMessage = scenarioChatInput.value.trim()
+      scenarioChatMessages.value.push({
+        role: 'user',
+        content: userMessage
+      })
+      scenarioChatInput.value = ''
+      isScenarioChatLoading.value = true
+
+      try {
+        const response = await axios.post(`${API_BASE}/chat-assistant`, {
+          question: userMessage,
+          context: scenarioAnalysis.value,
+          indicators: scenarioResult.value.indicators_after_dict,
+          prediction: scenarioResult.value.prediction_after
+        })
+
+        if (response.data.status === 'success') {
+          scenarioChatMessages.value.push({
+            role: 'assistant',
+            content: response.data.answer
+          })
+        }
+      } catch (error) {
+        scenarioChatMessages.value.push({
+          role: 'assistant',
+          content: '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.'
+        })
+      } finally {
+        isScenarioChatLoading.value = false
+      }
+    }
+
+    const exportScenarioReport = async () => {
+      if (!scenarioResult.value || !scenarioAnalysis.value) return
+
+      isExportingScenario.value = true
+
+      try {
+        // Tạo dữ liệu báo cáo
+        const reportData = {
+          prediction: scenarioResult.value.prediction_after,
+          indicators: scenarioResult.value.indicators_after,
+          indicators_dict: scenarioResult.value.indicators_after_dict,
+          analysis: scenarioAnalysis.value,
+          scenario_info: scenarioResult.value.scenario_info,
+          comparison: {
+            before: scenarioResult.value.prediction_before,
+            after: scenarioResult.value.prediction_after,
+            pd_change: scenarioResult.value.pd_change
+          }
+        }
+
+        const response = await axios.post(`${API_BASE}/export-report`, reportData, {
+          responseType: 'blob'
+        })
+
+        // Tạo link download
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `bao_cao_mo_phong_${Date.now()}.docx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        console.log('✅ Xuất báo cáo thành công')
+      } catch (error) {
+        console.error('❌ Lỗi khi xuất báo cáo:', error)
+        alert('Lỗi khi xuất báo cáo. Vui lòng thử lại.')
+      } finally {
+        isExportingScenario.value = false
+      }
+    }
+
+    const getPdChangeClass = (changePct) => {
+      const absChange = Math.abs(changePct)
+      if (absChange < 10) return 'pd-change-low'
+      if (absChange < 30) return 'pd-change-moderate'
+      if (absChange < 50) return 'pd-change-high'
+      return 'pd-change-critical'
+    }
+
+    const getChangeClass = (after, before) => {
+      if (before === 0) return ''
+      const change = ((after - before) / before) * 100
+      if (Math.abs(change) < 1) return 'change-neutral'
+      return change > 0 ? 'change-up' : 'change-down'
+    }
+
+    const getChangeText = (after, before) => {
+      if (before === 0) return 'N/A'
+      const change = ((after - before) / before) * 100
+      const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→'
+      return `${arrow}${Math.abs(change).toFixed(1)}%`
+    }
+
     // Mounted - Add scroll listener
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', handleScroll)
@@ -1508,7 +2035,34 @@ export default {
       handlePdXlsxFile,
       analyzePdWithIndustry,
       // Navigate
-      goToPdIndustryTab
+      goToPdIndustryTab,
+      // Scenario Simulation - NEW FEATURE
+      scenarioDataSource,
+      scenarioFile,
+      scenarioFileName,
+      selectedScenario,
+      customRevenue,
+      customInterest,
+      customRoe,
+      customCr,
+      isSimulating,
+      scenarioResult,
+      isAnalyzingScenario,
+      scenarioAnalysis,
+      showScenarioChatbot,
+      scenarioChatMessages,
+      scenarioChatInput,
+      isScenarioChatLoading,
+      isExportingScenario,
+      handleScenarioFile,
+      canRunSimulation,
+      runScenarioSimulation,
+      analyzeScenario,
+      sendScenarioChatMessage,
+      exportScenarioReport,
+      getPdChangeClass,
+      getChangeClass,
+      getChangeText
     }
   }
 }

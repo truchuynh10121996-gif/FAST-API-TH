@@ -631,6 +631,151 @@ Hãy trả lời bằng tiếng Việt, chuyên nghiệp và chi tiết.
                 "charts": []
             }
 
+    def analyze_scenario_simulation(self, data: Dict[str, Any]) -> str:
+        """
+        Phân tích chuyên sâu kết quả mô phỏng kịch bản xấu
+
+        Args:
+            data: Dict chứa:
+                - scenario_info: Thông tin kịch bản
+                - indicators_before_dict: 14 chỉ số trước khi áp kịch bản
+                - indicators_after_dict: 14 chỉ số sau khi áp kịch bản
+                - prediction_before: PD trước khi áp kịch bản
+                - prediction_after: PD sau khi áp kịch bản
+                - pd_change: Thông tin thay đổi PD
+
+        Returns:
+            Kết quả phân tích dạng text từ Gemini
+        """
+        scenario_info = data.get('scenario_info', {})
+        indicators_before = data.get('indicators_before_dict', {})
+        indicators_after = data.get('indicators_after_dict', {})
+        prediction_before = data.get('prediction_before', {})
+        prediction_after = data.get('prediction_after', {})
+        pd_change = data.get('pd_change', {})
+
+        # Lấy thông tin PD
+        pd_before = pd_change.get('before', 0) * 100
+        pd_after = pd_change.get('after', 0) * 100
+        pd_change_pct = pd_change.get('change_pct', 0)
+
+        # Phân loại mức độ ảnh hưởng
+        if abs(pd_change_pct) < 10:
+            impact_level = "ẢNH HƯỞNG NHẸ 🟢"
+            impact_desc = "Doanh nghiệp có khả năng chịu đựng tốt trước kịch bản xấu"
+        elif abs(pd_change_pct) < 30:
+            impact_level = "ẢNH HƯỞNG VỪA PHẢI 🟡"
+            impact_desc = "Doanh nghiệp chịu ảnh hưởng đáng kể nhưng vẫn kiểm soát được"
+        elif abs(pd_change_pct) < 50:
+            impact_level = "ẢNH HƯỞNG LỚN 🟠"
+            impact_desc = "Doanh nghiệp chịu tác động mạnh, cần có biện pháp phòng ngừa"
+        else:
+            impact_level = "ẢNH HƯỞNG RẤT LỚN 🔴"
+            impact_desc = "Doanh nghiệp gặp rủi ro nghiêm trọng, cần hành động khẩn cấp"
+
+        # Tạo chuỗi so sánh 14 chỉ số
+        indicators_comparison = ""
+        indicator_names = {
+            'X_1': 'Biên LN gộp',
+            'X_2': 'Biên LN trước thuế',
+            'X_3': 'ROA',
+            'X_4': 'ROE',
+            'X_5': 'Nợ/TS',
+            'X_6': 'Nợ/VCSH',
+            'X_7': 'TT hiện hành (CR)',
+            'X_8': 'TT nhanh',
+            'X_9': 'Trả lãi',
+            'X_10': 'Trả nợ gốc',
+            'X_11': 'Tạo tiền/VCSH',
+            'X_12': 'Vòng quay HTK',
+            'X_13': 'Kỳ thu tiền',
+            'X_14': 'Hiệu suất TS'
+        }
+
+        for key in ['X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9', 'X_10', 'X_11', 'X_12', 'X_13', 'X_14']:
+            before = indicators_before.get(key, 0)
+            after = indicators_after.get(key, 0)
+            change = ((after - before) / before * 100) if before != 0 else 0
+            arrow = "↓" if change < 0 else "↑" if change > 0 else "→"
+            indicators_comparison += f"{key} ({indicator_names[key]}): {before:.4f} → {after:.4f} ({arrow}{abs(change):.1f}%)\n"
+
+        # Lấy thông tin kịch bản
+        scenario_name = scenario_info.get('name', 'N/A')
+        changes = scenario_info.get('changes', {})
+        revenue_change = changes.get('revenue', 0)
+        interest_change = changes.get('interest', 0)
+        roe_change = changes.get('roe', 0)
+        cr_change = changes.get('cr', 0)
+
+        prompt = f"""
+Bạn là chuyên gia phân tích rủi ro tín dụng cao cấp của Agribank, chuyên về stress testing và mô phỏng kịch bản.
+
+Dựa trên kết quả mô phỏng kịch bản kinh tế xấu, hãy phân tích chuyên sâu và đưa ra khuyến nghị chiến lược.
+
+**KỊCH BẢN ĐÃ ÁP DỤNG:**
+- Tên kịch bản: {scenario_name}
+- Doanh thu thuần: {revenue_change:+.0f}%
+- Chi phí lãi vay: {interest_change:+.0f}%
+- ROE: {roe_change:+.0f}%
+- Current Ratio (CR): {cr_change:+.0f}%
+
+**KẾT QUẢ MÔ PHỎNG:**
+- PD trước khi áp kịch bản: {pd_before:.2f}%
+- PD sau khi áp kịch bản: {pd_after:.2f}%
+- Thay đổi PD: {pd_change_pct:+.2f}%
+- Mức độ ảnh hưởng: {impact_level}
+
+**SO SÁNH 14 CHỈ SỐ TÀI CHÍNH (TRƯỚC → SAU):**
+{indicators_comparison}
+
+**YÊU CẦU PHÂN TÍCH:**
+
+Hãy phân tích theo cấu trúc sau (bằng tiếng Việt, chuyên nghiệp, tối đa 600 từ):
+
+1. **Đánh giá Tổng quan:**
+   - Đánh giá khả năng chịu đựng của doanh nghiệp trước kịch bản {scenario_name}
+   - Phân tích mức độ nghiêm trọng của thay đổi PD ({pd_change_pct:+.2f}%)
+   - So sánh mức độ rủi ro trước và sau khi áp kịch bản
+
+2. **Phân tích Chi tiết Tác động:**
+   - Chỉ số nào bị ảnh hưởng NHIỀU NHẤT (thay đổi > 10%)?
+   - Chỉ số nào vẫn ổn định (thay đổi < 5%)?
+   - Phân tích chuỗi tác động: Doanh thu giảm → Lợi nhuận giảm → Khả năng trả nợ giảm
+   - Đánh giá khả năng thanh toán (X_7, X_8, X_9, X_10) sau kịch bản
+
+3. **Đánh giá Độ Bền Vững:**
+   - Doanh nghiệp có thể tồn tại được bao lâu trong kịch bản này?
+   - Điểm mạnh nào giúp doanh nghiệp chống đỡ?
+   - Điểm yếu nào khiến doanh nghiệp dễ bị tổn thương?
+
+4. **KHUYẾN NGHỊ CHIẾN LƯỢC** (QUAN TRỌNG):
+   - **Đối với Ngân hàng:**
+     * Có nên tiếp tục cho vay doanh nghiệp này trong điều kiện khủng hoảng?
+     * Nếu CÓ: Đề xuất hạn mức, lãi suất, thời hạn, tài sản đảm bảo
+     * Nếu KHÔNG: Giải thích rõ lý do
+     * Biện pháp giảm thiểu rủi ro (covenant, giám sát chặt chẽ, v.v.)
+
+   - **Đối với Doanh nghiệp:**
+     * Cần chuẩn bị gì để đối phó với kịch bản xấu?
+     * Ưu tiên cải thiện chỉ số nào?
+     * Chiến lược tài chính nên điều chỉnh như thế nào?
+
+5. **Kết luận:**
+   - Tổng kết ngắn gọn về khả năng phục hồi của doanh nghiệp
+   - Đánh giá cuối cùng về mức độ rủi ro tín dụng
+
+Hãy trình bày rõ ràng, có cấu trúc, tập trung vào insight chiến lược.
+"""
+
+        try:
+            # Gọi Gemini API
+            response = self.model.generate_content(prompt)
+            result = response.text
+            return result
+
+        except Exception as e:
+            return f"❌ Lỗi khi phân tích kịch bản: {str(e)}"
+
 
 # Khởi tạo instance global
 gemini_analyzer = None
