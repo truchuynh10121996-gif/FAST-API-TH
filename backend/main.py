@@ -970,6 +970,238 @@ async def analyze_scenario(request_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích kịch bản bằng Gemini: {str(e)}")
 
 
+@app.post("/simulate-scenario-macro")
+async def simulate_scenario_macro(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    scenario_type: str = Form("recession_mild"),
+    industry_code: str = Form("manufacturing"),
+    custom_gdp: float = Form(0),
+    custom_cpi: float = Form(0),
+    custom_ppi: float = Form(0),
+    custom_policy_rate: float = Form(0),
+    custom_fx: float = Form(0)
+):
+    """
+    Endpoint mô phỏng kịch bản vĩ mô (Macro Stress Testing)
+
+    Args:
+        file: File XLSX (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        scenario_type: Loại kịch bản ("recession_mild", "recession_moderate", "crisis", "custom")
+        industry_code: Mã ngành ("manufacturing", "export", "retail")
+        custom_gdp: % tăng trưởng GDP (chỉ dùng khi scenario_type="custom")
+        custom_cpi: % lạm phát CPI (chỉ dùng khi scenario_type="custom")
+        custom_ppi: % lạm phát PPI (chỉ dùng khi scenario_type="custom")
+        custom_policy_rate: Thay đổi lãi suất NHNN bps (chỉ dùng khi scenario_type="custom")
+        custom_fx: % thay đổi tỷ giá USD/VND (chỉ dùng khi scenario_type="custom")
+
+    Returns:
+        Dict chứa:
+        - macro_variables: 5 biến vĩ mô đã chọn
+        - micro_shocks: 4 biến vi mô được tính từ kênh truyền dẫn
+        - indicators_before: 14 chỉ số trước khi áp kịch bản
+        - indicators_after: 14 chỉ số sau khi áp kịch bản
+        - prediction_before: PD trước khi áp kịch bản
+        - prediction_after: PD sau khi áp kịch bản
+        - pd_change_pct: % thay đổi PD
+        - scenario_info: Thông tin về kịch bản đã áp dụng
+    """
+    try:
+        import json
+
+        # Kiểm tra mô hình đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình chưa được huấn luyện. Vui lòng upload file CSV để huấn luyện trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ BAN ĐẦU (indicators_before)
+        indicators_before = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators_before = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators_before = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. XÁC ĐỊNH 5 BIẾN VĨ MÔ THEO KỊCH BẢN
+        macro_scenario_configs = {
+            "recession_mild": {
+                "name": "🟠 Suy thoái nhẹ",
+                "gdp_growth_pct": -1.5,
+                "inflation_cpi_pct": 6.0,
+                "inflation_ppi_pct": 8.0,
+                "policy_rate_change_bps": 100,
+                "fx_usd_vnd_pct": 3.0
+            },
+            "recession_moderate": {
+                "name": "🔴 Suy thoái trung bình",
+                "gdp_growth_pct": -3.5,
+                "inflation_cpi_pct": 10.0,
+                "inflation_ppi_pct": 14.0,
+                "policy_rate_change_bps": 200,
+                "fx_usd_vnd_pct": 6.0
+            },
+            "crisis": {
+                "name": "⚫ Khủng hoảng",
+                "gdp_growth_pct": -6.0,
+                "inflation_cpi_pct": 15.0,
+                "inflation_ppi_pct": 20.0,
+                "policy_rate_change_bps": 300,
+                "fx_usd_vnd_pct": 10.0
+            },
+            "custom": {
+                "name": "🟡 Tùy chỉnh vĩ mô",
+                "gdp_growth_pct": custom_gdp,
+                "inflation_cpi_pct": custom_cpi,
+                "inflation_ppi_pct": custom_ppi,
+                "policy_rate_change_bps": custom_policy_rate,
+                "fx_usd_vnd_pct": custom_fx
+            }
+        }
+
+        if scenario_type not in macro_scenario_configs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Loại kịch bản không hợp lệ. Chọn: {', '.join(macro_scenario_configs.keys())}"
+            )
+
+        macro_scenario = macro_scenario_configs[scenario_type]
+
+        # 3. KÊNH TRUYỀN DẪN: MACRO → MICRO
+        # Gọi function macro_to_micro_transmission()
+        micro_shocks = excel_processor.macro_to_micro_transmission(
+            gdp_growth_pct=macro_scenario["gdp_growth_pct"],
+            inflation_cpi_pct=macro_scenario["inflation_cpi_pct"],
+            inflation_ppi_pct=macro_scenario["inflation_ppi_pct"],
+            policy_rate_change_bps=macro_scenario["policy_rate_change_bps"],
+            fx_usd_vnd_pct=macro_scenario["fx_usd_vnd_pct"],
+            industry_code=industry_code
+        )
+
+        # 4. TÍNH 14 CHỈ SỐ SAU KHI ÁP 4 BIẾN VI MÔ
+        # Sử dụng simulate_scenario_full_propagation() với 4 biến vi mô
+        indicators_after = excel_processor.simulate_scenario_full_propagation(
+            original_indicators=indicators_before,
+            revenue_change_pct=micro_shocks["revenue_change_pct"],
+            interest_rate_change_pct=micro_shocks["interest_rate_change_pct"],
+            cogs_change_pct=micro_shocks["cogs_change_pct"],
+            liquidity_shock_pct=micro_shocks["liquidity_shock_pct"]
+        )
+
+        # 5. DỰ BÁO PD TRƯỚC VÀ SAU
+        # Dự báo PD trước khi áp kịch bản
+        X_before = pd.DataFrame([indicators_before])
+        prediction_before = credit_model.predict(X_before)
+
+        # Dự báo PD sau khi áp kịch bản
+        X_after = pd.DataFrame([indicators_after])
+        prediction_after = credit_model.predict(X_after)
+
+        # 6. TÍNH % THAY ĐỔI PD
+        pd_before = prediction_before["pd_stacking"]
+        pd_after = prediction_after["pd_stacking"]
+        pd_change_pct = ((pd_after - pd_before) / pd_before * 100) if pd_before != 0 else 0
+
+        # 7. CHUẨN BỊ KẾT QUẢ TRẢ VỀ
+        # Chuyển đổi indicators thành list có tên
+        def indicators_to_list(indicators_dict):
+            indicator_names = {
+                'X_1': 'Hệ số biên lợi nhuận gộp',
+                'X_2': 'Hệ số biên lợi nhuận trước thuế',
+                'X_3': 'Tỷ suất lợi nhuận trước thuế trên tổng tài sản (ROA)',
+                'X_4': 'Tỷ suất lợi nhuận trước thuế trên vốn chủ sở hữu (ROE)',
+                'X_5': 'Hệ số nợ trên tài sản',
+                'X_6': 'Hệ số nợ trên vốn chủ sở hữu',
+                'X_7': 'Khả năng thanh toán hiện hành',
+                'X_8': 'Khả năng thanh toán nhanh',
+                'X_9': 'Hệ số khả năng trả lãi',
+                'X_10': 'Hệ số khả năng trả nợ gốc',
+                'X_11': 'Hệ số khả năng tạo tiền trên vốn chủ sở hữu',
+                'X_12': 'Vòng quay hàng tồn kho',
+                'X_13': 'Kỳ thu tiền bình quân',
+                'X_14': 'Hiệu suất sử dụng tài sản'
+            }
+            result = []
+            for key, value in indicators_dict.items():
+                result.append({
+                    'code': key,
+                    'name': indicator_names[key],
+                    'value': value
+                })
+            return result
+
+        # Tên ngành nghề
+        industry_names = {
+            "manufacturing": "Sản xuất",
+            "export": "Xuất khẩu",
+            "retail": "Bán lẻ"
+        }
+
+        return {
+            "status": "success",
+            "scenario_info": {
+                "type": scenario_type,
+                "name": macro_scenario["name"],
+                "industry": industry_names.get(industry_code, industry_code)
+            },
+            "macro_variables": {
+                "gdp_growth_pct": macro_scenario["gdp_growth_pct"],
+                "inflation_cpi_pct": macro_scenario["inflation_cpi_pct"],
+                "inflation_ppi_pct": macro_scenario["inflation_ppi_pct"],
+                "policy_rate_change_bps": macro_scenario["policy_rate_change_bps"],
+                "fx_usd_vnd_pct": macro_scenario["fx_usd_vnd_pct"]
+            },
+            "micro_shocks": micro_shocks,
+            "indicators_before": indicators_to_list(indicators_before),
+            "indicators_before_dict": indicators_before,
+            "indicators_after": indicators_to_list(indicators_after),
+            "indicators_after_dict": indicators_after,
+            "prediction_before": prediction_before,
+            "prediction_after": prediction_after,
+            "pd_change": {
+                "before": pd_before,
+                "after": pd_after,
+                "change_pct": round(pd_change_pct, 2),
+                "change_absolute": round(pd_after - pd_before, 6)
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi mô phỏng kịch bản vĩ mô: {str(e)}")
+
+
 # ================================================================================================
 # MAIN
 # ================================================================================================
