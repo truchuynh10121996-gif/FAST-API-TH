@@ -455,6 +455,259 @@ class ExcelProcessor:
 
         return new_indicators
 
+    def simulate_scenario_full_propagation(
+        self,
+        original_indicators: Dict[str, float],
+        revenue_change_pct: float = 0,
+        interest_rate_change_pct: float = 0,
+        cogs_change_pct: float = 0,
+        liquidity_shock_pct: float = 0
+    ) -> Dict[str, float]:
+        """
+        Mô phỏng kịch bản Stress Testing với tính toán dây chuyền hoàn chỉnh (Phương án A)
+
+        Args:
+            original_indicators: Dict chứa 14 chỉ số ban đầu (X_1 -> X_14)
+            revenue_change_pct: % thay đổi Doanh thu thuần (âm = giảm, dương = tăng)
+            interest_rate_change_pct: % thay đổi Lãi suất vay (âm = giảm, dương = tăng)
+            cogs_change_pct: % thay đổi Giá vốn hàng bán (âm = giảm, dương = tăng)
+            liquidity_shock_pct: % sốc thanh khoản TSNH (âm = giảm, dương = tăng)
+
+        Returns:
+            Dict chứa 14 chỉ số sau khi áp dụng kịch bản stress testing
+
+        Quy trình:
+            1. Reverse Engineering: Từ 14 chỉ số ban đầu → Tính ngược ra các biến gốc
+            2. Áp dụng Shocks: Thay đổi biến gốc theo 4 input
+            3. Tính dây chuyền: Cập nhật các biến phụ thuộc
+            4. Tính lại 14 chỉ số: Từ các biến gốc mới
+        """
+
+        # ================================================================================
+        # BƯỚC 1: REVERSE ENGINEERING - Tính ngược các biến gốc từ 14 chỉ số
+        # ================================================================================
+
+        # Giả định các giá trị cơ sở (baseline) để reverse engineering
+        # Đây là các giá trị "chuẩn hóa" để tính ngược
+
+        # Giả định Doanh thu thuần ban đầu = 1000 (đơn vị triệu VND)
+        doanh_thu_thuan_cu = 1000.0
+
+        # Từ X_1: Hệ số biên LN gộp = LN gộp / Doanh thu
+        # => LN gộp = X_1 * Doanh thu
+        loi_nhuan_gop_cu = original_indicators['X_1'] * doanh_thu_thuan_cu
+
+        # Từ LN gộp = Doanh thu - Giá vốn
+        # => Giá vốn = Doanh thu - LN gộp
+        gia_von_hang_ban_cu = doanh_thu_thuan_cu - loi_nhuan_gop_cu
+
+        # Từ X_2: Hệ số biên LN trước thuế = LNTT / Doanh thu
+        # => LNTT = X_2 * Doanh thu
+        loi_nhuan_truoc_thue_cu = original_indicators['X_2'] * doanh_thu_thuan_cu
+
+        # Từ X_14: Hiệu suất tài sản = Doanh thu / BQ Tài sản
+        # => BQ Tài sản = Doanh thu / X_14
+        binh_quan_tong_tai_san_cu = doanh_thu_thuan_cu / original_indicators['X_14'] if original_indicators['X_14'] != 0 else 1000
+
+        # Giả định Tổng tài sản cuối kỳ ≈ BQ Tài sản (đơn giản hóa)
+        tong_tai_san_cu = binh_quan_tong_tai_san_cu
+
+        # Từ X_4: ROE = LNTT / BQ VCSH
+        # => BQ VCSH = LNTT / X_4
+        binh_quan_von_chu_so_huu_cu = loi_nhuan_truoc_thue_cu / original_indicators['X_4'] if original_indicators['X_4'] != 0 else 500
+
+        # Giả định VCSH cuối kỳ ≈ BQ VCSH (đơn giản hóa)
+        von_chu_so_huu_cu = binh_quan_von_chu_so_huu_cu
+
+        # Từ X_5: Hệ số Nợ/TS = Nợ / Tổng TS
+        # => Nợ = X_5 * Tổng TS
+        no_phai_tra_cu = original_indicators['X_5'] * tong_tai_san_cu
+
+        # Từ X_7: CR = TSNH / Nợ NH
+        # Giả định Nợ NH ≈ 50% Nợ phải trả
+        no_ngan_han_cu = no_phai_tra_cu * 0.5
+
+        # => TSNH = X_7 * Nợ NH
+        tai_san_ngan_han_cu = original_indicators['X_7'] * no_ngan_han_cu
+
+        # Từ X_8: Khả năng TT nhanh = (TSNH - HTK) / Nợ NH
+        # => HTK = TSNH - (X_8 * Nợ NH)
+        hang_ton_kho_cu = tai_san_ngan_han_cu - (original_indicators['X_8'] * no_ngan_han_cu)
+
+        # Giả định BQ HTK ≈ HTK cuối kỳ
+        binh_quan_hang_ton_kho_cu = hang_ton_kho_cu
+
+        # Từ X_13: Kỳ thu tiền BQ = 365 / (Doanh thu / BQ Phải thu)
+        # => BQ Phải thu = 365 * Doanh thu / (X_13 * Doanh thu) = 365 / X_13 * Doanh thu / Doanh thu
+        # Đơn giản: BQ Phải thu = Doanh thu * X_13 / 365
+        binh_quan_phai_thu_cu = (doanh_thu_thuan_cu * original_indicators['X_13'] / 365) if original_indicators['X_13'] != 0 else 50
+
+        # Từ X_11: Khả năng tạo tiền / VCSH = Tiền / VCSH
+        # => Tiền = X_11 * VCSH
+        tien_va_tuong_duong_cu = original_indicators['X_11'] * von_chu_so_huu_cu
+
+        # Từ LNTT = LN gộp - Chi phí HĐ - Lãi vay
+        # Chi phí HĐ cố định = LN gộp - LNTT - Lãi vay
+        # Giả định Lãi vay dựa trên X_9: Khả năng trả lãi = (LNTT + Lãi vay) / Lãi vay
+        # => X_9 * Lãi vay = LNTT + Lãi vay
+        # => Lãi vay = LNTT / (X_9 - 1)
+        lai_vay_cu = loi_nhuan_truoc_thue_cu / (original_indicators['X_9'] - 1) if original_indicators['X_9'] > 1 else 10
+
+        # Chi phí hoạt động cố định = LN gộp - LNTT - Lãi vay
+        chi_phi_hoat_dong_co_dinh = max(0, loi_nhuan_gop_cu - loi_nhuan_truoc_thue_cu - lai_vay_cu)
+
+        # Từ X_10: Khả năng trả nợ gốc = (LNTT + Lãi vay + Khấu hao) / (Lãi vay + Nợ DH)
+        # => Nợ DH = [(LNTT + Lãi vay + Khấu hao) / X_10] - Lãi vay
+        # Giả định Khấu hao ≈ 5% Tổng TS
+        khau_hao_cu = tong_tai_san_cu * 0.05
+
+        tu_so_x10 = loi_nhuan_truoc_thue_cu + lai_vay_cu + khau_hao_cu
+        no_dai_han_cu = (tu_so_x10 / original_indicators['X_10'] - lai_vay_cu) if original_indicators['X_10'] != 0 else 100
+
+        # ================================================================================
+        # BƯỚC 2: ÁP DỤNG SHOCKS - Thay đổi biến gốc theo 4 input
+        # ================================================================================
+
+        # Shock 1: Doanh thu thay đổi
+        doanh_thu_thuan_moi = doanh_thu_thuan_cu * (1 + revenue_change_pct / 100)
+
+        # Shock 2: Giá vốn thay đổi
+        gia_von_hang_ban_moi = gia_von_hang_ban_cu * (1 + cogs_change_pct / 100)
+
+        # Shock 3: Lãi suất vay thay đổi
+        lai_vay_moi = lai_vay_cu * (1 + interest_rate_change_pct / 100)
+
+        # Shock 4: Thanh khoản TSNH thay đổi
+        tai_san_ngan_han_moi = tai_san_ngan_han_cu * (1 + liquidity_shock_pct / 100)
+
+        # ================================================================================
+        # BƯỚC 3: TÍNH DÂY CHUYỀN - Cập nhật các biến phụ thuộc
+        # ================================================================================
+
+        # 3.1. Lợi nhuận gộp mới = Doanh thu mới - Giá vốn mới
+        loi_nhuan_gop_moi = doanh_thu_thuan_moi - gia_von_hang_ban_moi
+
+        # 3.2. Lợi nhuận trước thuế mới = LN gộp mới - Chi phí HĐ cố định - Lãi vay mới
+        # Giả định: Chi phí HĐ cố định không đổi trong ngắn hạn
+        loi_nhuan_truoc_thue_moi = loi_nhuan_gop_moi - chi_phi_hoat_dong_co_dinh - lai_vay_moi
+
+        # 3.3. Vốn chủ sở hữu mới = VCSH cũ + (LNTT mới - LNTT cũ)
+        # Giả định: Lợi nhuận được giữ lại (không chia cổ tức)
+        von_chu_so_huu_moi = von_chu_so_huu_cu + (loi_nhuan_truoc_thue_moi - loi_nhuan_truoc_thue_cu)
+
+        # Đảm bảo VCSH không âm
+        von_chu_so_huu_moi = max(50, von_chu_so_huu_moi)
+
+        # 3.4. Nợ phải trả mới = Nợ cũ + vay thêm (nếu lỗ)
+        # Nếu LNTT < 0 thì doanh nghiệp cần vay thêm để bù đắp lỗ
+        if loi_nhuan_truoc_thue_moi < 0:
+            no_phai_tra_moi = no_phai_tra_cu + abs(loi_nhuan_truoc_thue_moi) * 0.5
+        else:
+            no_phai_tra_moi = no_phai_tra_cu
+
+        # 3.5. Tổng tài sản mới = VCSH mới + Nợ mới
+        tong_tai_san_moi = von_chu_so_huu_moi + no_phai_tra_moi
+
+        # 3.6. Hàng tồn kho mới
+        # Nếu doanh thu giảm → Bán chậm → HTK tăng
+        # HTK mới = HTK cũ × (1 - revenue_change_pct/200)
+        # Chia 200 để ảnh hưởng nhẹ hơn (50% của revenue change)
+        hang_ton_kho_moi = hang_ton_kho_cu * (1 - revenue_change_pct / 200)
+        hang_ton_kho_moi = max(0, hang_ton_kho_moi)
+
+        # 3.7. Nợ ngắn hạn mới
+        # Nếu doanh thu giảm → Cần vay ngắn hạn để duy trì hoạt động
+        # NNH mới = NNH cũ × (1 - revenue_change_pct/200)
+        no_ngan_han_moi = no_ngan_han_cu * (1 - revenue_change_pct / 200)
+        no_ngan_han_moi = max(50, no_ngan_han_moi)
+
+        # 3.8. Tiền và tương đương tiền mới
+        # Bị ảnh hưởng bởi thanh khoản và lợi nhuận
+        tien_va_tuong_duong_moi = tien_va_tuong_duong_cu * (1 + liquidity_shock_pct / 100)
+        # Nếu lỗ thì tiền giảm thêm
+        if loi_nhuan_truoc_thue_moi < 0:
+            tien_va_tuong_duong_moi = max(10, tien_va_tuong_duong_moi + loi_nhuan_truoc_thue_moi * 0.3)
+        tien_va_tuong_duong_moi = max(10, tien_va_tuong_duong_moi)
+
+        # 3.9. Phải thu bình quân mới
+        # Phải thu tăng nếu doanh thu giảm (khách hàng trả chậm)
+        binh_quan_phai_thu_moi = binh_quan_phai_thu_cu * (1 - revenue_change_pct / 150)
+        binh_quan_phai_thu_moi = max(10, binh_quan_phai_thu_moi)
+
+        # 3.10. Bình quân tổng tài sản mới
+        # Giả định BQ TS ≈ TS cuối kỳ (đơn giản hóa)
+        binh_quan_tong_tai_san_moi = tong_tai_san_moi
+
+        # 3.11. Bình quân VCSH mới
+        binh_quan_von_chu_so_huu_moi = von_chu_so_huu_moi
+
+        # 3.12. Bình quân HTK mới
+        binh_quan_hang_ton_kho_moi = hang_ton_kho_moi
+
+        # 3.13. Khấu hao mới (giả định không đổi hoặc theo TS mới)
+        khau_hao_moi = tong_tai_san_moi * 0.05
+
+        # 3.14. Nợ dài hạn mới (giả định không đổi trong ngắn hạn)
+        no_dai_han_moi = no_dai_han_cu
+
+        # ================================================================================
+        # BƯỚC 4: TÍNH LẠI 14 CHỈ SỐ - Từ các biến gốc mới
+        # ================================================================================
+
+        new_indicators = {}
+
+        # X_1: Hệ số biên lợi nhuận gộp
+        new_indicators['X_1'] = loi_nhuan_gop_moi / doanh_thu_thuan_moi if doanh_thu_thuan_moi != 0 else 0
+
+        # X_2: Hệ số biên lợi nhuận trước thuế
+        new_indicators['X_2'] = loi_nhuan_truoc_thue_moi / doanh_thu_thuan_moi if doanh_thu_thuan_moi != 0 else 0
+
+        # X_3: Tỷ suất lợi nhuận trước thuế trên tổng tài sản (ROA)
+        new_indicators['X_3'] = loi_nhuan_truoc_thue_moi / binh_quan_tong_tai_san_moi if binh_quan_tong_tai_san_moi != 0 else 0
+
+        # X_4: Tỷ suất lợi nhuận trước thuế trên vốn chủ sở hữu (ROE)
+        new_indicators['X_4'] = loi_nhuan_truoc_thue_moi / binh_quan_von_chu_so_huu_moi if binh_quan_von_chu_so_huu_moi != 0 else 0
+
+        # X_5: Hệ số nợ trên tài sản
+        new_indicators['X_5'] = no_phai_tra_moi / tong_tai_san_moi if tong_tai_san_moi != 0 else 0
+
+        # X_6: Hệ số nợ trên vốn chủ sở hữu
+        new_indicators['X_6'] = no_phai_tra_moi / von_chu_so_huu_moi if von_chu_so_huu_moi != 0 else 0
+
+        # X_7: Khả năng thanh toán hiện hành
+        new_indicators['X_7'] = tai_san_ngan_han_moi / no_ngan_han_moi if no_ngan_han_moi != 0 else 0
+
+        # X_8: Khả năng thanh toán nhanh
+        new_indicators['X_8'] = (tai_san_ngan_han_moi - hang_ton_kho_moi) / no_ngan_han_moi if no_ngan_han_moi != 0 else 0
+
+        # X_9: Hệ số khả năng trả lãi
+        lntt_cong_lai_vay_moi = loi_nhuan_truoc_thue_moi + lai_vay_moi
+        new_indicators['X_9'] = lntt_cong_lai_vay_moi / lai_vay_moi if lai_vay_moi != 0 else 0
+
+        # X_10: Hệ số khả năng trả nợ gốc
+        tu_so_x10_moi = lntt_cong_lai_vay_moi + khau_hao_moi
+        mau_so_x10_moi = lai_vay_moi + no_dai_han_moi
+        new_indicators['X_10'] = tu_so_x10_moi / mau_so_x10_moi if mau_so_x10_moi != 0 else 0
+
+        # X_11: Hệ số khả năng tạo tiền trên vốn chủ sở hữu
+        new_indicators['X_11'] = tien_va_tuong_duong_moi / von_chu_so_huu_moi if von_chu_so_huu_moi != 0 else 0
+
+        # X_12: Vòng quay hàng tồn kho
+        x12_value = gia_von_hang_ban_moi / binh_quan_hang_ton_kho_moi if binh_quan_hang_ton_kho_moi != 0 else 0
+        new_indicators['X_12'] = abs(x12_value)  # Lấy giá trị tuyệt đối
+
+        # X_13: Kỳ thu tiền bình quân
+        new_indicators['X_13'] = 365 / (doanh_thu_thuan_moi / binh_quan_phai_thu_moi) if (doanh_thu_thuan_moi != 0 and binh_quan_phai_thu_moi != 0) else 0
+
+        # X_14: Hiệu suất sử dụng tài sản
+        new_indicators['X_14'] = doanh_thu_thuan_moi / binh_quan_tong_tai_san_moi if binh_quan_tong_tai_san_moi != 0 else 0
+
+        # Làm tròn kết quả
+        for key in new_indicators:
+            new_indicators[key] = round(new_indicators[key], 6)
+
+        return new_indicators
+
 
 # Khởi tạo instance global
 excel_processor = ExcelProcessor()
