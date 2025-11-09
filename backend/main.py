@@ -3,7 +3,7 @@ FastAPI Backend - Hệ thống Đánh giá Rủi ro Tín dụng
 Endpoints: /train, /predict, /predict-from-xlsx, /analyze, /export-report
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from dotenv import load_dotenv
 import os
 
@@ -22,6 +22,9 @@ from model import credit_model
 from gemini_api import get_gemini_analyzer
 from excel_processor import excel_processor
 from report_generator import ReportGenerator
+from early_warning import early_warning_system
+from anomaly_detection import anomaly_system
+from survival_analysis import survival_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -742,24 +745,24 @@ Hãy trả lời câu hỏi:
 @app.post("/simulate-scenario")
 async def simulate_scenario(
     file: Optional[UploadFile] = File(None),
-    indicators_json: Optional[str] = None,
-    scenario_type: str = "mild",
-    custom_revenue: float = 0,
-    custom_interest: float = 0,
-    custom_roe: float = 0,
-    custom_cr: float = 0
+    indicators_json: Optional[str] = Form(None),
+    scenario_type: str = Form("mild"),
+    custom_revenue: float = Form(0),
+    custom_interest: float = Form(0),
+    custom_cogs: float = Form(0),
+    custom_liquidity: float = Form(0)
 ):
     """
-    Endpoint mô phỏng kịch bản xấu - Tính toán PD trước và sau khi áp dụng kịch bản
+    Endpoint mô phỏng kịch bản xấu - Stress Testing với tính toán dây chuyền hoàn chỉnh (Phương án A)
 
     Args:
         file: File XLSX (nếu tải file mới) - Optional
         indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
         scenario_type: Loại kịch bản ("mild", "moderate", "crisis", "custom")
-        custom_revenue: % thay đổi doanh thu (chỉ dùng khi scenario_type="custom")
-        custom_interest: % thay đổi chi phí lãi vay (chỉ dùng khi scenario_type="custom")
-        custom_roe: % thay đổi ROE (chỉ dùng khi scenario_type="custom")
-        custom_cr: % thay đổi CR (chỉ dùng khi scenario_type="custom")
+        custom_revenue: % thay đổi doanh thu thuần (chỉ dùng khi scenario_type="custom")
+        custom_interest: % thay đổi lãi suất vay (chỉ dùng khi scenario_type="custom")
+        custom_cogs: % thay đổi giá vốn hàng bán (chỉ dùng khi scenario_type="custom")
+        custom_liquidity: % sốc thanh khoản TSNH (chỉ dùng khi scenario_type="custom")
 
     Returns:
         Dict chứa:
@@ -816,35 +819,35 @@ async def simulate_scenario(
                 detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
             )
 
-        # 2. XÁC ĐỊNH % BIẾN ĐỘNG THEO KỊCH BẢN
+        # 2. XÁC ĐỊNH % BIẾN ĐỘNG THEO KỊCH BẢN (PHƯƠNG ÁN A - STRESS TESTING)
         scenario_configs = {
             "mild": {
                 "name": "🟠 Kinh tế giảm nhẹ",
                 "revenue_change": -5,
-                "interest_change": 5,
-                "roe_change": -5,
-                "cr_change": -5
+                "interest_rate_change": 10,
+                "cogs_change": 3,
+                "liquidity_shock": -5
             },
             "moderate": {
                 "name": "🔴 Cú sốc kinh tế trung bình",
-                "revenue_change": -10,
-                "interest_change": 10,
-                "roe_change": -10,
-                "cr_change": -8
+                "revenue_change": -12,
+                "interest_rate_change": 25,
+                "cogs_change": 8,
+                "liquidity_shock": -12
             },
             "crisis": {
                 "name": "⚫ Khủng hoảng",
-                "revenue_change": -20,
-                "interest_change": 15,
-                "roe_change": -20,
-                "cr_change": -12
+                "revenue_change": -25,
+                "interest_rate_change": 40,
+                "cogs_change": 15,
+                "liquidity_shock": -25
             },
             "custom": {
                 "name": "🟡 Tùy chọn biến động",
                 "revenue_change": custom_revenue,
-                "interest_change": custom_interest,
-                "roe_change": custom_roe,
-                "cr_change": custom_cr
+                "interest_rate_change": custom_interest,
+                "cogs_change": custom_cogs,
+                "liquidity_shock": custom_liquidity
             }
         }
 
@@ -857,12 +860,13 @@ async def simulate_scenario(
         scenario = scenario_configs[scenario_type]
 
         # 3. TÍNH 14 CHỈ SỐ SAU KHI ÁP KỊCH BẢN (indicators_after)
-        indicators_after = excel_processor.simulate_scenario_indicators(
+        # Sử dụng PHƯƠNG ÁN A: Stress Testing với tính toán dây chuyền hoàn chỉnh
+        indicators_after = excel_processor.simulate_scenario_full_propagation(
             original_indicators=indicators_before,
             revenue_change_pct=scenario["revenue_change"],
-            interest_change_pct=scenario["interest_change"],
-            roe_change_pct=scenario["roe_change"],
-            cr_change_pct=scenario["cr_change"]
+            interest_rate_change_pct=scenario["interest_rate_change"],
+            cogs_change_pct=scenario["cogs_change"],
+            liquidity_shock_pct=scenario["liquidity_shock"]
         )
 
         # 4. DỰ BÁO PD TRƯỚC VÀ SAU
@@ -914,9 +918,9 @@ async def simulate_scenario(
                 "name": scenario["name"],
                 "changes": {
                     "revenue": scenario["revenue_change"],
-                    "interest": scenario["interest_change"],
-                    "roe": scenario["roe_change"],
-                    "cr": scenario["cr_change"]
+                    "interest": scenario["interest_rate_change"],
+                    "cogs": scenario["cogs_change"],
+                    "liquidity": scenario["liquidity_shock"]
                 }
             },
             "indicators_before": indicators_to_list(indicators_before),
@@ -969,6 +973,1056 @@ async def analyze_scenario(request_data: Dict[str, Any]):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích kịch bản bằng Gemini: {str(e)}")
+
+
+@app.post("/simulate-scenario-macro")
+async def simulate_scenario_macro(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    scenario_type: str = Form("recession_mild"),
+    industry_code: str = Form("manufacturing"),
+    custom_gdp: float = Form(0),
+    custom_cpi: float = Form(0),
+    custom_ppi: float = Form(0),
+    custom_policy_rate: float = Form(0),
+    custom_fx: float = Form(0)
+):
+    """
+    Endpoint mô phỏng kịch bản vĩ mô (Macro Stress Testing)
+
+    Args:
+        file: File XLSX (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        scenario_type: Loại kịch bản ("recession_mild", "recession_moderate", "crisis", "custom")
+        industry_code: Mã ngành ("manufacturing", "export", "retail")
+        custom_gdp: % tăng trưởng GDP (chỉ dùng khi scenario_type="custom")
+        custom_cpi: % lạm phát CPI (chỉ dùng khi scenario_type="custom")
+        custom_ppi: % lạm phát PPI (chỉ dùng khi scenario_type="custom")
+        custom_policy_rate: Thay đổi lãi suất NHNN bps (chỉ dùng khi scenario_type="custom")
+        custom_fx: % thay đổi tỷ giá USD/VND (chỉ dùng khi scenario_type="custom")
+
+    Returns:
+        Dict chứa:
+        - macro_variables: 5 biến vĩ mô đã chọn
+        - micro_shocks: 4 biến vi mô được tính từ kênh truyền dẫn
+        - indicators_before: 14 chỉ số trước khi áp kịch bản
+        - indicators_after: 14 chỉ số sau khi áp kịch bản
+        - prediction_before: PD trước khi áp kịch bản
+        - prediction_after: PD sau khi áp kịch bản
+        - pd_change_pct: % thay đổi PD
+        - scenario_info: Thông tin về kịch bản đã áp dụng
+    """
+    try:
+        import json
+
+        # Kiểm tra mô hình đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình chưa được huấn luyện. Vui lòng upload file CSV để huấn luyện trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ BAN ĐẦU (indicators_before)
+        indicators_before = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators_before = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators_before = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. XÁC ĐỊNH 5 BIẾN VĨ MÔ THEO KỊCH BẢN
+        macro_scenario_configs = {
+            "recession_mild": {
+                "name": "🟠 Suy thoái nhẹ",
+                "gdp_growth_pct": -1.5,
+                "inflation_cpi_pct": 6.0,
+                "inflation_ppi_pct": 8.0,
+                "policy_rate_change_bps": 100,
+                "fx_usd_vnd_pct": 3.0
+            },
+            "recession_moderate": {
+                "name": "🔴 Suy thoái trung bình",
+                "gdp_growth_pct": -3.5,
+                "inflation_cpi_pct": 10.0,
+                "inflation_ppi_pct": 14.0,
+                "policy_rate_change_bps": 200,
+                "fx_usd_vnd_pct": 6.0
+            },
+            "crisis": {
+                "name": "⚫ Khủng hoảng",
+                "gdp_growth_pct": -6.0,
+                "inflation_cpi_pct": 15.0,
+                "inflation_ppi_pct": 20.0,
+                "policy_rate_change_bps": 300,
+                "fx_usd_vnd_pct": 10.0
+            },
+            "custom": {
+                "name": "🟡 Tùy chỉnh vĩ mô",
+                "gdp_growth_pct": custom_gdp,
+                "inflation_cpi_pct": custom_cpi,
+                "inflation_ppi_pct": custom_ppi,
+                "policy_rate_change_bps": custom_policy_rate,
+                "fx_usd_vnd_pct": custom_fx
+            }
+        }
+
+        if scenario_type not in macro_scenario_configs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Loại kịch bản không hợp lệ. Chọn: {', '.join(macro_scenario_configs.keys())}"
+            )
+
+        macro_scenario = macro_scenario_configs[scenario_type]
+
+        # 3. KÊNH TRUYỀN DẪN: MACRO → MICRO
+        # Gọi function macro_to_micro_transmission()
+        micro_shocks = excel_processor.macro_to_micro_transmission(
+            gdp_growth_pct=macro_scenario["gdp_growth_pct"],
+            inflation_cpi_pct=macro_scenario["inflation_cpi_pct"],
+            inflation_ppi_pct=macro_scenario["inflation_ppi_pct"],
+            policy_rate_change_bps=macro_scenario["policy_rate_change_bps"],
+            fx_usd_vnd_pct=macro_scenario["fx_usd_vnd_pct"],
+            industry_code=industry_code
+        )
+
+        # 4. TÍNH 14 CHỈ SỐ SAU KHI ÁP 4 BIẾN VI MÔ
+        # Sử dụng simulate_scenario_full_propagation() với 4 biến vi mô
+        indicators_after = excel_processor.simulate_scenario_full_propagation(
+            original_indicators=indicators_before,
+            revenue_change_pct=micro_shocks["revenue_change_pct"],
+            interest_rate_change_pct=micro_shocks["interest_rate_change_pct"],
+            cogs_change_pct=micro_shocks["cogs_change_pct"],
+            liquidity_shock_pct=micro_shocks["liquidity_shock_pct"]
+        )
+
+        # 5. DỰ BÁO PD TRƯỚC VÀ SAU
+        # Dự báo PD trước khi áp kịch bản
+        X_before = pd.DataFrame([indicators_before])
+        prediction_before = credit_model.predict(X_before)
+
+        # Dự báo PD sau khi áp kịch bản
+        X_after = pd.DataFrame([indicators_after])
+        prediction_after = credit_model.predict(X_after)
+
+        # 6. TÍNH % THAY ĐỔI PD
+        pd_before = prediction_before["pd_stacking"]
+        pd_after = prediction_after["pd_stacking"]
+        pd_change_pct = ((pd_after - pd_before) / pd_before * 100) if pd_before != 0 else 0
+
+        # 7. CHUẨN BỊ KẾT QUẢ TRẢ VỀ
+        # Chuyển đổi indicators thành list có tên
+        def indicators_to_list(indicators_dict):
+            indicator_names = {
+                'X_1': 'Hệ số biên lợi nhuận gộp',
+                'X_2': 'Hệ số biên lợi nhuận trước thuế',
+                'X_3': 'Tỷ suất lợi nhuận trước thuế trên tổng tài sản (ROA)',
+                'X_4': 'Tỷ suất lợi nhuận trước thuế trên vốn chủ sở hữu (ROE)',
+                'X_5': 'Hệ số nợ trên tài sản',
+                'X_6': 'Hệ số nợ trên vốn chủ sở hữu',
+                'X_7': 'Khả năng thanh toán hiện hành',
+                'X_8': 'Khả năng thanh toán nhanh',
+                'X_9': 'Hệ số khả năng trả lãi',
+                'X_10': 'Hệ số khả năng trả nợ gốc',
+                'X_11': 'Hệ số khả năng tạo tiền trên vốn chủ sở hữu',
+                'X_12': 'Vòng quay hàng tồn kho',
+                'X_13': 'Kỳ thu tiền bình quân',
+                'X_14': 'Hiệu suất sử dụng tài sản'
+            }
+            result = []
+            for key, value in indicators_dict.items():
+                result.append({
+                    'code': key,
+                    'name': indicator_names[key],
+                    'value': value
+                })
+            return result
+
+        # Tên ngành nghề
+        industry_names = {
+            "manufacturing": "Sản xuất",
+            "export": "Xuất khẩu",
+            "retail": "Bán lẻ"
+        }
+
+        return {
+            "status": "success",
+            "scenario_info": {
+                "type": scenario_type,
+                "name": macro_scenario["name"],
+                "industry": industry_names.get(industry_code, industry_code)
+            },
+            "macro_variables": {
+                "gdp_growth_pct": macro_scenario["gdp_growth_pct"],
+                "inflation_cpi_pct": macro_scenario["inflation_cpi_pct"],
+                "inflation_ppi_pct": macro_scenario["inflation_ppi_pct"],
+                "policy_rate_change_bps": macro_scenario["policy_rate_change_bps"],
+                "fx_usd_vnd_pct": macro_scenario["fx_usd_vnd_pct"]
+            },
+            "micro_shocks": micro_shocks,
+            "indicators_before": indicators_to_list(indicators_before),
+            "indicators_before_dict": indicators_before,
+            "indicators_after": indicators_to_list(indicators_after),
+            "indicators_after_dict": indicators_after,
+            "prediction_before": prediction_before,
+            "prediction_after": prediction_after,
+            "pd_change": {
+                "before": pd_before,
+                "after": pd_after,
+                "change_pct": round(pd_change_pct, 2),
+                "change_absolute": round(pd_after - pd_before, 6)
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi mô phỏng kịch bản vĩ mô: {str(e)}")
+
+
+@app.post("/analyze-macro")
+async def analyze_macro(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích kết quả mô phỏng vĩ mô bằng Gemini API
+
+    Args:
+        request_data: Dict chứa kết quả mô phỏng vĩ mô
+
+    Returns:
+        Dict chứa kết quả phân tích từ Gemini
+    """
+    try:
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Lấy thông tin từ request
+        scenario_info = request_data.get('scenario_info', {})
+        macro_variables = request_data.get('macro_variables', {})
+        micro_shocks = request_data.get('micro_shocks', {})
+        indicators_before = request_data.get('indicators_before_dict', {})
+        indicators_after = request_data.get('indicators_after_dict', {})
+        pd_change = request_data.get('pd_change', {})
+
+        # Tạo prompt cho Gemini
+        prompt = f"""
+Bạn là chuyên gia phân tích kinh tế vĩ mô và rủi ro tín dụng của Agribank. Hãy phân tích kết quả mô phỏng kịch bản vĩ mô dưới đây.
+
+**THÔNG TIN KỊCH BẢN VĨ MÔ:**
+
+**Kịch bản:** {scenario_info.get('name', 'N/A')}
+**Ngành:** {scenario_info.get('industry', 'N/A')}
+
+**5 BIẾN VĨ MÔ:**
+- Tăng trưởng GDP: {macro_variables.get('gdp_growth_pct', 0):.1f}%
+- Lạm phát CPI: {macro_variables.get('inflation_cpi_pct', 0):.1f}%
+- Lạm phát PPI: {macro_variables.get('inflation_ppi_pct', 0):.1f}%
+- Thay đổi lãi suất NHNN: {macro_variables.get('policy_rate_change_bps', 0):.0f} bps
+- Thay đổi tỷ giá USD/VND: {macro_variables.get('fx_usd_vnd_pct', 0):.1f}%
+
+**4 BIẾN VI MÔ (Kênh truyền dẫn):**
+- Thay đổi doanh thu: {micro_shocks.get('revenue_change_pct', 0):.2f}%
+- Thay đổi lãi suất vay: {micro_shocks.get('interest_rate_change_pct', 0):.2f}%
+- Thay đổi giá vốn hàng bán: {micro_shocks.get('cogs_change_pct', 0):.2f}%
+- Sốc thanh khoản: {micro_shocks.get('liquidity_shock_pct', 0):.2f}%
+
+**TÁC ĐỘNG ĐẾN XÁC SUẤT VỠ NỢ:**
+- PD trước: {pd_change.get('before', 0):.4f}
+- PD sau: {pd_change.get('after', 0):.4f}
+- Thay đổi: {pd_change.get('change_pct', 0):.2f}% (tuyệt đối: {pd_change.get('change_absolute', 0):.4f})
+
+**YÊU CẦU PHÂN TÍCH:**
+
+Hãy viết báo cáo phân tích chi tiết (sử dụng Markdown) với cấu trúc sau:
+
+## 📊 TỔNG QUAN KỊCH BẢN VĨ MÔ
+(2-3 câu mô tả kịch bản vĩ mô và mức độ nghiêm trọng)
+
+## 🔄 PHÂN TÍCH KÊNH TRUYỀN DẪN
+(Giải thích cách 5 biến vĩ mô tác động lên 4 biến vi mô của doanh nghiệp)
+
+### Tác động lên Doanh thu
+(Phân tích chi tiết)
+
+### Tác động lên Chi phí & Lãi suất
+(Phân tích chi tiết)
+
+### Tác động lên Thanh khoản
+(Phân tích chi tiết)
+
+## 📈 ĐÁNH GIÁ TÁC ĐỘNG ĐẾN PD
+
+### Mức độ thay đổi
+(Phân tích mức độ thay đổi PD: nhẹ/trung bình/nghiêm trọng)
+
+### Các chỉ số tài chính chịu ảnh hưởng nhiều nhất
+(Liệt kê 3-5 chỉ số bị ảnh hưởng mạnh nhất)
+
+## 💡 KHUYẾN NGHỊ
+
+### Đối với Doanh nghiệp
+(2-3 khuyến nghị cụ thể)
+
+### Đối với Ngân hàng
+(2-3 khuyến nghị về chính sách tín dụng)
+
+## ⚠️ RỦI RO CẦN LƯU Ý
+(Liệt kê 2-3 rủi ro tiềm ẩn cần theo dõi)
+
+---
+**Lưu ý:** Viết ngắn gọn, chuyên nghiệp, dễ hiểu. Tập trung vào insights và actionable recommendations.
+"""
+
+        # Gọi Gemini API
+        response = analyzer.model.generate_content(prompt)
+        analysis = response.text
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích vĩ mô bằng Gemini: {str(e)}")
+
+
+@app.post("/train-early-warning-model")
+async def train_early_warning_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Early Warning System
+
+    Args:
+        file: File Excel chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'label' (0=không vỡ nợ, 1=vỡ nợ)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - num_samples: Số lượng mẫu
+        - feature_importances: Feature importances từ RandomForest
+        - cluster_distribution: Phân bố các cluster
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['label']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Early Warning System
+            result = early_warning_system.train_models(df)
+
+            return {
+                "status": "success",
+                "message": "Early Warning System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Early Warning System: {str(e)}")
+
+
+@app.post("/early-warning-check")
+async def early_warning_check(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    report_period: Optional[str] = Form(None),
+    industry_code: str = Form("manufacturing")
+):
+    """
+    Endpoint kiểm tra cảnh báo rủi ro sớm
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        report_period: Kỳ báo cáo (Quý/6 tháng/Năm) - Optional, chỉ để hiển thị
+        industry_code: Mã ngành ("manufacturing", "export", "retail")
+
+    Returns:
+        Dict chứa:
+        - health_score: Health Score (0-100)
+        - risk_level: Mức rủi ro (Safe/Watch/Warning/Alert)
+        - risk_level_color: Màu sắc
+        - current_pd: PD hiện tại
+        - top_weaknesses: Top 3 điểm yếu
+        - cluster_info: Thông tin cluster
+        - pd_projection: Dự báo PD tương lai
+        - gemini_diagnosis: Báo cáo chẩn đoán từ Gemini AI
+        - feature_importances: Feature importances
+    """
+    try:
+        import json
+
+        # Kiểm tra Early Warning System đã được train chưa
+        if early_warning_system.stacking_model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Early Warning System chưa được train. Vui lòng upload file training data trước."
+            )
+
+        # Kiểm tra mô hình PD đã được train chưa
+        if credit_model.model is None:
+            if os.path.exists("model_stacking.pkl"):
+                credit_model.load_model("model_stacking.pkl")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mô hình PD chưa được huấn luyện. Vui lòng train mô hình trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. TÍNH HEALTH SCORE
+        health_score = early_warning_system.calculate_health_score(indicators)
+
+        # 3. PHÂN LOẠI MỨC RỦI RO
+        risk_info = early_warning_system.classify_risk_level(health_score)
+
+        # 4. TÍNH PD HIỆN TẠI (sử dụng early_warning_system.stacking_model)
+        feature_cols = [f'X_{i}' for i in range(1, 15)]
+        X_current = [[indicators[col] for col in feature_cols]]
+        current_pd = early_warning_system.stacking_model.predict_proba(X_current)[0, 1] * 100
+
+        # 5. PHÁT HIỆN ĐIỂM YẾU
+        weaknesses = early_warning_system.detect_weaknesses(indicators)
+
+        # 6. XÁC ĐỊNH VỊ TRÍ CLUSTER
+        cluster_info = early_warning_system.get_cluster_position(indicators)
+
+        # 7. DỰ BÁO PD TƯƠNG LAI (3/6/12 tháng x 3 kịch bản)
+        scenarios = ['recession_mild', 'recession_moderate', 'crisis']
+        time_periods = [3, 6, 12]
+
+        pd_projection = {
+            'current': current_pd
+        }
+
+        for scenario in scenarios:
+            pd_projection[scenario] = {}
+            for months in time_periods:
+                pd_future = early_warning_system.project_future_pd(
+                    indicators=indicators,
+                    months=months,
+                    scenario=scenario,
+                    excel_processor=excel_processor,
+                    industry_code=industry_code
+                )
+                pd_projection[scenario][f'{months}_months'] = pd_future
+
+        # 8. TẠO BÁO CÁO CHẨN ĐOÁN BẰNG GEMINI AI
+        gemini_diagnosis = early_warning_system.generate_gemini_diagnosis(
+            health_score=health_score,
+            risk_info=risk_info,
+            weaknesses=weaknesses,
+            cluster_info=cluster_info,
+            pd_projections=pd_projection,
+            current_pd=current_pd,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        # 9. TRẢ VỀ KẾT QUẢ
+        return {
+            "status": "success",
+            "health_score": health_score,
+            "risk_level": risk_info['risk_level'],
+            "risk_level_color": risk_info['risk_level_color'],
+            "risk_level_icon": risk_info['risk_level_icon'],
+            "risk_level_text": risk_info['risk_level_text'],
+            "current_pd": current_pd,
+            "top_weaknesses": weaknesses,
+            "cluster_info": cluster_info,
+            "pd_projection": pd_projection,
+            "gemini_diagnosis": gemini_diagnosis,
+            "feature_importances": early_warning_system.feature_importances,
+            "report_period": report_period
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra cảnh báo rủi ro: {str(e)}")
+
+
+@app.post("/train-anomaly-model")
+async def train_anomaly_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Anomaly Detection System
+
+    Args:
+        file: File Excel/CSV chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'label' (0=khỏe mạnh, 1=vỡ nợ)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - feature_statistics: Thống kê 14 features (P5, P25, P50, P75, P95)
+        - contamination_rate: Tỷ lệ contamination
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['label']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Anomaly Detection System
+            result = anomaly_system.train_model(df)
+
+            return {
+                "status": "success",
+                "message": "Anomaly Detection System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Anomaly Detection System: {str(e)}")
+
+
+@app.post("/check-anomaly")
+async def check_anomaly(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None)
+):
+    """
+    Endpoint kiểm tra bất thường cho DN mới
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+
+    Returns:
+        Dict chứa:
+        - anomaly_score: Điểm bất thường (0-100)
+        - risk_level: Mức rủi ro
+        - abnormal_features: List các features bất thường
+        - anomaly_type: Loại bất thường
+        - gemini_explanation: Giải thích từ Gemini AI
+        - comparison_with_healthy: So sánh với DN khỏe mạnh
+    """
+    try:
+        import json
+
+        # Kiểm tra Anomaly Detection System đã được train chưa
+        if anomaly_system.model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Anomaly Detection System chưa được train. Vui lòng upload file training data trước."
+            )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. TÍNH ANOMALY SCORE
+        anomaly_score = anomaly_system.calculate_anomaly_score(indicators)
+
+        # 3. PHÁT HIỆN CÁC FEATURES BẤT THƯỜNG
+        abnormal_features = anomaly_system.detect_abnormal_features(indicators)
+
+        # 4. PHÂN LOẠI LOẠI BẤT THƯỜNG
+        anomaly_type = anomaly_system.classify_anomaly_type(indicators, abnormal_features)
+
+        # 5. XÁC ĐỊNH MỨC RỦI RO
+        if anomaly_score < 60:
+            risk_level = "Bình thường"
+            risk_level_color = "#10B981"
+            risk_level_icon = "⚠️"
+        elif anomaly_score < 80:
+            risk_level = "Bất thường Trung bình"
+            risk_level_color = "#F59E0B"
+            risk_level_icon = "🔶"
+        else:
+            risk_level = "Bất thường Cao"
+            risk_level_color = "#EF4444"
+            risk_level_icon = "🔴"
+
+        # 6. TẠO GIẢI THÍCH BẰNG GEMINI AI
+        gemini_explanation = anomaly_system.generate_gemini_explanation(
+            indicators=indicators,
+            anomaly_score=anomaly_score,
+            abnormal_features=abnormal_features,
+            anomaly_type=anomaly_type,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        # 7. SO SÁNH VỚI DN KHỎE MẠNH (cho Radar Chart)
+        comparison_with_healthy = []
+        for feature in anomaly_system.feature_names:
+            comparison_with_healthy.append({
+                'feature': anomaly_system.indicator_names[feature],
+                'current': indicators[feature],
+                'healthy_mean': anomaly_system.healthy_stats[feature]['mean']
+            })
+
+        # 8. TRẢ VỀ KẾT QUẢ
+        return {
+            "status": "success",
+            "anomaly_score": anomaly_score,
+            "risk_level": risk_level,
+            "risk_level_color": risk_level_color,
+            "risk_level_icon": risk_level_icon,
+            "abnormal_features": abnormal_features,
+            "anomaly_type": anomaly_type,
+            "gemini_explanation": gemini_explanation,
+            "comparison_with_healthy": comparison_with_healthy,
+            "indicators": indicators
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra bất thường: {str(e)}")
+
+
+@app.post("/train-survival-model")
+async def train_survival_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Survival Analysis System
+
+    Args:
+        file: File Excel/CSV chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'default' (0/1)
+              + cột 'months_to_default' (optional, sẽ tạo synthetic nếu chưa có)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - num_samples: Số lượng mẫu
+        - num_events: Số DN vỡ nợ
+        - num_censored: Số DN không vỡ nợ (censored)
+        - c_index: Concordance index (độ chính xác)
+        - top_hazard_ratios: Top 5 hazard ratios quan trọng nhất
+        - median_survival_time: Median time-to-default (tháng)
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['default']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Survival Analysis System
+            result = survival_system.train_models(df)
+
+            # Lưu models
+            survival_system.save_models("survival_models")
+
+            return {
+                "status": "success",
+                "message": "Survival Analysis System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Survival Analysis System: {str(e)}")
+
+
+@app.post("/predict-survival")
+async def predict_survival(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    model_type: str = Form("cox")
+):
+    """
+    Endpoint dự báo survival curve cho DN mới
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        model_type: 'cox' hoặc 'rsf'
+
+    Returns:
+        Dict chứa:
+        - survival_curve: List of {time, survival_prob}
+        - median_time_to_default: Median time (tháng)
+        - survival_at_6m, survival_at_12m, survival_at_24m
+        - risk_level: 'Thấp', 'Trung bình', 'Cao'
+        - risk_level_color
+        - risk_level_icon
+    """
+    try:
+        import json
+
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. DỰ BÁO SURVIVAL CURVE
+        result = survival_system.predict_survival_curve(indicators, model_type=model_type)
+
+        return {
+            "status": "success",
+            **result,
+            "indicators": indicators
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi dự báo survival curve: {str(e)}")
+
+
+@app.get("/survival-metrics")
+async def get_survival_metrics():
+    """
+    Endpoint lấy hazard ratios và metrics của Survival System
+
+    Returns:
+        Dict chứa:
+        - hazard_ratios: List of hazard ratios cho 14 chỉ số
+        - c_index: Concordance index
+    """
+    try:
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        # Lấy hazard ratios
+        hazard_ratios = survival_system.get_hazard_ratios()
+
+        # Lấy C-index
+        c_index = survival_system.cox_model.concordance_index_
+
+        return {
+            "status": "success",
+            "hazard_ratios": hazard_ratios,
+            "c_index": round(c_index, 4)
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy survival metrics: {str(e)}")
+
+
+@app.post("/compare-survival")
+async def compare_survival(request_data: Dict[str, Any]):
+    """
+    Endpoint so sánh survival curves của nhiều DN
+
+    Args:
+        request_data: Dict chứa {
+            "indicators_list": [
+                {"X_1": ..., "X_2": ..., ...},
+                {"X_1": ..., "X_2": ..., ...},
+                ...
+            ]
+        }
+
+    Returns:
+        Dict chứa comparison_data để vẽ chart
+    """
+    try:
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        indicators_list = request_data.get('indicators_list', [])
+
+        if len(indicators_list) == 0:
+            raise HTTPException(status_code=400, detail="Danh sách indicators_list không được rỗng")
+
+        # So sánh survival curves
+        result = survival_system.compare_survival_curves(indicators_list)
+
+        return {
+            "status": "success",
+            **result
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi so sánh survival curves: {str(e)}")
+
+
+@app.post("/analyze-survival")
+async def analyze_survival(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích survival result bằng Gemini AI
+
+    Args:
+        request_data: Dict chứa {
+            "indicators": {"X_1": ..., "X_2": ..., ...},
+            "survival_result": {...}
+        }
+
+    Returns:
+        Dict chứa analysis từ Gemini
+    """
+    try:
+        indicators = request_data.get('indicators', {})
+        survival_result = request_data.get('survival_result', {})
+
+        if not indicators or not survival_result:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin indicators hoặc survival_result"
+            )
+
+        # Tạo phân tích bằng Gemini AI
+        analysis = survival_system.generate_gemini_analysis(
+            indicators=indicators,
+            survival_result=survival_result,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích survival bằng Gemini: {str(e)}")
 
 
 # ================================================================================================

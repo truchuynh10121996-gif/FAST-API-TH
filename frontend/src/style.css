@@ -297,20 +297,23 @@ body {
 /* ✅ TAB SYSTEM - Thay thế Sidebar */
 .tabs-container {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.8rem;
   margin: 1rem auto 1.5rem;
-  max-width: 600px;
-  padding: 0 1rem;
+  max-width: 1200px;
+  padding: 0 0.5rem;
 }
 
 .tab-button {
-  flex: 1;
-  padding: 0.6rem 1.2rem;
+  flex: 0 1 auto;
+  min-width: 180px;
+  max-width: 230px;
+  padding: 0.6rem 1rem;
   border: 2px solid #ff6b9d;
   background: rgba(255, 255, 255, 0.9);
   color: #ff6b9d;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   border-radius: 10px;
   cursor: pointer;
@@ -1364,11 +1367,6 @@ body {
   line-height: 1.6;
 }
 
-/* Tabs container - điều chỉnh để chứa 3 tabs */
-.tabs-container {
-  max-width: 800px;
-}
-
 /* Dashboard Guide Styles */
 .dashboard-guide {
   background: linear-gradient(135deg, rgba(255, 240, 245, 0.6) 0%, rgba(255, 228, 240, 0.6) 100%);
@@ -2269,5 +2267,853 @@ body {
   .scenario-changes {
     flex-direction: column;
     gap: 0.5rem;
+  }
+}
+
+/* ========================================
+   💫 PHẦN SO SÁNH PD MỚI - THIẾT KẾ ĐẸP
+   ======================================== */
+
+.pd-change-section {
+  margin: 3rem 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 240, 247, 0.98) 50%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 8px 32px rgba(255, 107, 157, 0.15);
+  border: 2px solid rgba(255, 182, 193, 0.3);
+}
+
+.pd-comparison-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed rgba(255, 182, 193, 0.4);
+}
+
+.pd-comparison-cards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.pd-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fff5f8 100%);
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 6px 24px rgba(255, 107, 157, 0.2);
+  transition: all 0.3s ease;
+  min-width: 280px;
+  border: 2px solid transparent;
+}
+
+.pd-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 36px rgba(255, 107, 157, 0.3);
+}
+
+.pd-before-card {
+  border-color: rgba(46, 125, 50, 0.3);
+  background: linear-gradient(145deg, #f0fff4 0%, #e8fff0 100%);
+}
+
+.pd-after-card {
+  border-color: rgba(220, 53, 69, 0.3);
+  background: linear-gradient(145deg, #fff5f5 0%, #ffe8e8 100%);
+}
+
+.pd-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.pd-card-icon {
+  font-size: 2rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.pd-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.5px;
+}
+
+.pd-card-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #FF6B9D;
+  text-align: center;
+  margin: 1rem 0;
+  text-shadow: 2px 2px 4px rgba(255, 107, 157, 0.2);
+}
+
+.pd-card-label {
+  font-size: 0.95rem;
+  color: var(--text-light);
+  text-align: center;
+  font-weight: 500;
+}
+
+.pd-arrow-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pd-arrow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.pd-change-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  animation: float 2s ease-in-out infinite;
+}
+
+.pd-change-badge .change-icon {
+  font-size: 1.5rem;
+}
+
+.pd-change-badge.mild {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #e65100;
+}
+
+.pd-change-badge.moderate {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #c62828;
+}
+
+.pd-change-badge.severe {
+  background: linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%);
+  color: #ffffff;
+}
+
+.pd-change-badge.positive {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  color: #2e7d32;
+}
+
+/* Nhận xét ngắn gọn */
+.pd-analysis-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg,
+    rgba(255, 249, 232, 0.95) 0%,
+    rgba(255, 243, 224, 0.95) 100%
+  );
+  border-radius: 16px;
+  border-left: 5px solid #FF6B9D;
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.15);
+}
+
+.note-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  animation: float 3s ease-in-out infinite;
+}
+
+.note-content {
+  flex: 1;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-dark);
+}
+
+.note-content strong {
+  color: #FF6B9D;
+  font-weight: 700;
+}
+
+/* Responsive cho phần so sánh PD mới */
+@media (max-width: 768px) {
+  .pd-comparison-cards {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .pd-card {
+    min-width: 100%;
+  }
+
+  .pd-card-value {
+    font-size: 2.5rem;
+  }
+
+  .pd-arrow-container {
+    transform: rotate(90deg);
+    margin: 1rem 0;
+  }
+
+  .pd-analysis-note {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .note-icon {
+    font-size: 2rem;
+  }
+}
+
+/* ============================================================================
+   MACRO SCENARIO SIMULATION - NEW STYLES
+   ============================================================================ */
+
+/* Macro Scenario Banner */
+.macro-scenario-banner {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+}
+
+.macro-scenario-banner h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.macro-variables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.macro-variables-grid span {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.8rem;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Macro-to-Micro Transmission Box */
+.macro-to-micro-box {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 3px solid #3B82F6;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15);
+}
+
+.micro-shocks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.micro-shock-card {
+  background: white;
+  border: 2px solid #3B82F6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+}
+
+.micro-shock-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+  border-color: #1D4ED8;
+}
+
+.micro-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.micro-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+
+.micro-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #3B82F6;
+}
+
+.micro-value.negative {
+  color: #DC2626;
+}
+
+/* Macro Scenario Card - Variant */
+.scenario-card.macro-card {
+  border: 3px solid #3B82F6;
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+}
+
+.scenario-card.macro-card.selected {
+  border-color: #1D4ED8;
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  color: white;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+}
+
+.scenario-card.macro-card.selected .scenario-title,
+.scenario-card.macro-card.selected .scenario-details li {
+  color: white;
+}
+
+.scenario-card.macro-card.selected .highlight-negative {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+}
+
+/* Responsive cho Macro Scenario */
+@media (max-width: 768px) {
+  .macro-variables-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .micro-shocks-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .macro-scenario-banner h3 {
+    font-size: 1.2rem;
+  }
+
+  .micro-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .macro-variables-grid,
+  .micro-shocks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ====================================================================================================
+   EARLY WARNING SYSTEM - NEW FEATURE
+   ==================================================================================================== */
+
+.early-warning-card {
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%);
+  border: 2px solid #FF6B6B;
+}
+
+.early-warning-title {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.early-warning-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 107, 107, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
+}
+
+.training-result-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.feature-importance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feature-importance-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+}
+
+.cluster-distribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.success-box {
+  background: #E8F5E9;
+  border: 2px solid #4CAF50;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #2E7D32;
+  font-weight: 600;
+}
+
+/* Health Score Section */
+.health-score-section {
+  text-align: center;
+}
+
+.risk-level-badge {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  border-radius: 50px;
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Weaknesses Section */
+.weakness-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.weakness-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.weakness-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.weakness-card.severity-critical {
+  border-left: 6px solid #EF4444;
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFFFFF 100%);
+}
+
+.weakness-card.severity-moderate {
+  border-left: 6px solid #F59E0B;
+  background: linear-gradient(135deg, #FFF9E8 0%, #FFFFFF 100%);
+}
+
+.weakness-card.severity-low {
+  border-left: 6px solid #10B981;
+  background: linear-gradient(135deg, #E8F5E9 0%, #FFFFFF 100%);
+}
+
+.weakness-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid rgba(255, 107, 157, 0.2);
+}
+
+.weakness-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #FF6B9D 0%, #FFB347 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 1rem;
+  margin-right: 0.8rem;
+}
+
+.weakness-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.weakness-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.weakness-values {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}
+
+.weakness-value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.value-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.value-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.weakness-gap-chart {
+  margin-top: 0.5rem;
+}
+
+.gap-bar-container {
+  width: 100%;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.gap-bar {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.gap-severity-label {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Cluster Section */
+.cluster-info-box {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.05) 0%, rgba(255, 179, 71, 0.05) 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 107, 157, 0.2);
+  margin-bottom: 1.5rem;
+}
+
+/* Gemini Diagnosis Section */
+.gemini-diagnosis-box {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF9F5 100%);
+  padding: 2rem;
+  border-radius: 14px;
+  border: 3px solid #FF1493;
+  box-shadow: 0 8px 24px rgba(255, 20, 147, 0.2);
+}
+
+.diagnosis-content {
+  line-height: 1.8;
+  font-size: 1rem;
+  color: #333;
+}
+
+.diagnosis-content h3 {
+  color: #FF1493;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 900;
+  font-size: 1.3rem;
+}
+
+.diagnosis-content h4 {
+  color: #FF6B9D;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.diagnosis-content p {
+  margin-bottom: 1rem;
+}
+
+.diagnosis-content ul {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.diagnosis-content li {
+  margin-bottom: 0.5rem;
+}
+
+.diagnosis-content strong {
+  color: #FF6B9D;
+  font-weight: 700;
+}
+
+/* Responsive for Early Warning */
+@media (max-width: 768px) {
+  .weakness-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .weakness-values {
+    grid-template-columns: 1fr;
+  }
+
+  .early-warning-section {
+    padding: 1rem;
+  }
+
+  .risk-level-badge {
+    font-size: 1.1rem;
+    padding: 0.6rem 1.5rem;
+  }
+
+  .weakness-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weakness-number {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cluster-info-box {
+    padding: 1rem;
+  }
+
+  .gemini-diagnosis-box {
+    padding: 1rem;
+  }
+
+  .diagnosis-content {
+    font-size: 0.95rem;
+  }
+
+  .weakness-name {
+    font-size: 1rem;
+  }
+
+  .value-number {
+    font-size: 1rem;
+  }
+}
+
+/* ============================================================================ */
+/* ANOMALY DETECTION TAB - Phát hiện Gian lận */
+/* ============================================================================ */
+
+.anomaly-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 245, 245, 0.98) 100%);
+  border: 2px solid rgba(255, 68, 68, 0.2);
+  box-shadow: 0 8px 24px rgba(255, 68, 68, 0.12);
+}
+
+.anomaly-section {
+  margin: 2rem 0;
+}
+
+/* Anomaly Score Gauge Container */
+.anomaly-score-gauge {
+  width: 100%;
+  height: 300px;
+  margin: 0 auto;
+}
+
+/* Risk Level Badge */
+.risk-level-badge {
+  padding: 1.5rem 3rem;
+  border-radius: 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: inline-block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.risk-level-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Abnormal Features Table */
+.abnormal-features-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.abnormal-features-table thead {
+  background: linear-gradient(135deg, #FF4444 0%, #FF8844 100%);
+  color: white;
+}
+
+.abnormal-features-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.abnormal-features-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.abnormal-features-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.abnormal-features-table tbody tr:hover {
+  background-color: #FFF9E6;
+}
+
+/* Severity Styles */
+.severity-high {
+  border-left: 4px solid #EF4444 !important;
+  background-color: #FEF2F2 !important;
+}
+
+.severity-medium {
+  border-left: 4px solid #F59E0B !important;
+  background-color: #FFFBEB !important;
+}
+
+/* Comparison Radar Chart Container */
+.comparison-radar-chart {
+  width: 100%;
+  height: 500px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Anomaly Type Badge */
+.anomaly-type-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.anomaly-type-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Gemini Explanation Box */
+.gemini-explanation-box {
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%);
+  border: 3px solid #FFB6C1;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gemini-explanation-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 182, 193, 0.4);
+}
+
+/* Responsive Design for Anomaly Detection */
+@media (max-width: 768px) {
+  .anomaly-score-gauge {
+    height: 250px;
+  }
+
+  .comparison-radar-chart {
+    height: 400px;
+  }
+
+  .abnormal-features-table th,
+  .abnormal-features-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .risk-level-badge {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+  }
+
+  .anomaly-type-badge {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .gemini-explanation-box {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .anomaly-score-gauge {
+    height: 200px;
+  }
+
+  .comparison-radar-chart {
+    height: 350px;
+  }
+
+  .abnormal-features-table {
+    font-size: 0.8rem;
+  }
+
+  .abnormal-features-table th,
+  .abnormal-features-table td {
+    padding: 0.5rem;
+  }
+
+  .risk-level-badge {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .anomaly-type-badge {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .gemini-explanation-box {
+    padding: 1rem;
+    font-size: 0.9rem;
   }
 }
