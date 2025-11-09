@@ -2925,3 +2925,195 @@ body {
     font-size: 1rem;
   }
 }
+
+/* ============================================================================ */
+/* ANOMALY DETECTION TAB - Phát hiện Gian lận */
+/* ============================================================================ */
+
+.anomaly-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 245, 245, 0.98) 100%);
+  border: 2px solid rgba(255, 68, 68, 0.2);
+  box-shadow: 0 8px 24px rgba(255, 68, 68, 0.12);
+}
+
+.anomaly-section {
+  margin: 2rem 0;
+}
+
+/* Anomaly Score Gauge Container */
+.anomaly-score-gauge {
+  width: 100%;
+  height: 300px;
+  margin: 0 auto;
+}
+
+/* Risk Level Badge */
+.risk-level-badge {
+  padding: 1.5rem 3rem;
+  border-radius: 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: inline-block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.risk-level-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Abnormal Features Table */
+.abnormal-features-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.abnormal-features-table thead {
+  background: linear-gradient(135deg, #FF4444 0%, #FF8844 100%);
+  color: white;
+}
+
+.abnormal-features-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.abnormal-features-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.abnormal-features-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.abnormal-features-table tbody tr:hover {
+  background-color: #FFF9E6;
+}
+
+/* Severity Styles */
+.severity-high {
+  border-left: 4px solid #EF4444 !important;
+  background-color: #FEF2F2 !important;
+}
+
+.severity-medium {
+  border-left: 4px solid #F59E0B !important;
+  background-color: #FFFBEB !important;
+}
+
+/* Comparison Radar Chart Container */
+.comparison-radar-chart {
+  width: 100%;
+  height: 500px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Anomaly Type Badge */
+.anomaly-type-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.anomaly-type-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Gemini Explanation Box */
+.gemini-explanation-box {
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%);
+  border: 3px solid #FFB6C1;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gemini-explanation-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 182, 193, 0.4);
+}
+
+/* Responsive Design for Anomaly Detection */
+@media (max-width: 768px) {
+  .anomaly-score-gauge {
+    height: 250px;
+  }
+
+  .comparison-radar-chart {
+    height: 400px;
+  }
+
+  .abnormal-features-table th,
+  .abnormal-features-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .risk-level-badge {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+  }
+
+  .anomaly-type-badge {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .gemini-explanation-box {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .anomaly-score-gauge {
+    height: 200px;
+  }
+
+  .comparison-radar-chart {
+    height: 350px;
+  }
+
+  .abnormal-features-table {
+    font-size: 0.8rem;
+  }
+
+  .abnormal-features-table th,
+  .abnormal-features-table td {
+    padding: 0.5rem;
+  }
+
+  .risk-level-badge {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .anomaly-type-badge {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .gemini-explanation-box {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+}
