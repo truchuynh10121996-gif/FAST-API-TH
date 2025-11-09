@@ -4556,7 +4556,7 @@ export default {
         const formData = new FormData()
         formData.append('file', survivalTrainFile.value)
 
-        const response = await axios.post(`${API_URL}/train`, formData, {
+        const response = await axios.post(`${API_BASE}/train-survival-model`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -4611,7 +4611,7 @@ export default {
 
         formData.append('model_type', survivalModelType.value)
 
-        const response = await axios.post(`${API_URL}/predict-survival`, formData, {
+        const response = await axios.post(`${API_BASE}/predict-survival`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -4740,7 +4740,7 @@ export default {
       isLoadingHazards.value = true
 
       try {
-        const response = await axios.get(`${API_URL}/survival-metrics`)
+        const response = await axios.get(`${API_BASE}/survival-metrics`)
         hazardRatios.value = response.data.hazard_ratios
       } catch (error) {
         console.error('Error loading hazard ratios:', error)
@@ -4773,7 +4773,7 @@ export default {
           }
         }
 
-        const response = await axios.post(`${API_URL}/analyze-survival`, requestData)
+        const response = await axios.post(`${API_BASE}/analyze-survival`, requestData)
         survivalGeminiAnalysis.value = response.data.analysis
 
       } catch (error) {
@@ -4818,7 +4818,7 @@ export default {
           }
         }
 
-        const response = await axios.post(`${API_URL}/chat-assistant`, requestData)
+        const response = await axios.post(`${API_BASE}/chat-assistant`, requestData)
 
         survivalChatMessages.value.push({
           role: 'assistant',
