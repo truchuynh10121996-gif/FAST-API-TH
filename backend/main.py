@@ -24,6 +24,7 @@ from excel_processor import excel_processor
 from report_generator import ReportGenerator
 from early_warning import early_warning_system
 from anomaly_detection import anomaly_system
+from survival_analysis import survival_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -1726,6 +1727,300 @@ async def check_anomaly(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra bất thường: {str(e)}")
+
+
+@app.post("/train-survival-model")
+async def train_survival_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Survival Analysis System
+
+    Args:
+        file: File Excel/CSV chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'default' (0/1)
+              + cột 'months_to_default' (optional, sẽ tạo synthetic nếu chưa có)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - num_samples: Số lượng mẫu
+        - num_events: Số DN vỡ nợ
+        - num_censored: Số DN không vỡ nợ (censored)
+        - c_index: Concordance index (độ chính xác)
+        - top_hazard_ratios: Top 5 hazard ratios quan trọng nhất
+        - median_survival_time: Median time-to-default (tháng)
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['default']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Survival Analysis System
+            result = survival_system.train_models(df)
+
+            # Lưu models
+            survival_system.save_models("survival_models")
+
+            return {
+                "status": "success",
+                "message": "Survival Analysis System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Survival Analysis System: {str(e)}")
+
+
+@app.post("/predict-survival")
+async def predict_survival(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None),
+    model_type: str = Form("cox")
+):
+    """
+    Endpoint dự báo survival curve cho DN mới
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+        model_type: 'cox' hoặc 'rsf'
+
+    Returns:
+        Dict chứa:
+        - survival_curve: List of {time, survival_prob}
+        - median_time_to_default: Median time (tháng)
+        - survival_at_6m, survival_at_12m, survival_at_24m
+        - risk_level: 'Thấp', 'Trung bình', 'Cao'
+        - risk_level_color
+        - risk_level_icon
+    """
+    try:
+        import json
+
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. DỰ BÁO SURVIVAL CURVE
+        result = survival_system.predict_survival_curve(indicators, model_type=model_type)
+
+        return {
+            "status": "success",
+            **result,
+            "indicators": indicators
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi dự báo survival curve: {str(e)}")
+
+
+@app.get("/survival-metrics")
+async def get_survival_metrics():
+    """
+    Endpoint lấy hazard ratios và metrics của Survival System
+
+    Returns:
+        Dict chứa:
+        - hazard_ratios: List of hazard ratios cho 14 chỉ số
+        - c_index: Concordance index
+    """
+    try:
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        # Lấy hazard ratios
+        hazard_ratios = survival_system.get_hazard_ratios()
+
+        # Lấy C-index
+        c_index = survival_system.cox_model.concordance_index_
+
+        return {
+            "status": "success",
+            "hazard_ratios": hazard_ratios,
+            "c_index": round(c_index, 4)
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy survival metrics: {str(e)}")
+
+
+@app.post("/compare-survival")
+async def compare_survival(request_data: Dict[str, Any]):
+    """
+    Endpoint so sánh survival curves của nhiều DN
+
+    Args:
+        request_data: Dict chứa {
+            "indicators_list": [
+                {"X_1": ..., "X_2": ..., ...},
+                {"X_1": ..., "X_2": ..., ...},
+                ...
+            ]
+        }
+
+    Returns:
+        Dict chứa comparison_data để vẽ chart
+    """
+    try:
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
+                )
+
+        indicators_list = request_data.get('indicators_list', [])
+
+        if len(indicators_list) == 0:
+            raise HTTPException(status_code=400, detail="Danh sách indicators_list không được rỗng")
+
+        # So sánh survival curves
+        result = survival_system.compare_survival_curves(indicators_list)
+
+        return {
+            "status": "success",
+            **result
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi so sánh survival curves: {str(e)}")
+
+
+@app.post("/analyze-survival")
+async def analyze_survival(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích survival result bằng Gemini AI
+
+    Args:
+        request_data: Dict chứa {
+            "indicators": {"X_1": ..., "X_2": ..., ...},
+            "survival_result": {...}
+        }
+
+    Returns:
+        Dict chứa analysis từ Gemini
+    """
+    try:
+        indicators = request_data.get('indicators', {})
+        survival_result = request_data.get('survival_result', {})
+
+        if not indicators or not survival_result:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu thông tin indicators hoặc survival_result"
+            )
+
+        # Tạo phân tích bằng Gemini AI
+        analysis = survival_system.generate_gemini_analysis(
+            indicators=indicators,
+            survival_result=survival_result,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích survival bằng Gemini: {str(e)}")
 
 
 # ================================================================================================
