@@ -1470,6 +1470,78 @@
                 </div>
               </div>
             </div>
+
+            <!-- Gemini Analysis Section -->
+            <div style="margin: 3rem 0;">
+              <button
+                @click="analyzeMacro"
+                class="btn btn-primary"
+                :disabled="isAnalyzingMacro"
+                style="width: 100%;"
+              >
+                {{ isAnalyzingMacro ? '⏳ Đang phân tích...' : '🤖 Phân tích sâu bằng Gemini AI' }}
+              </button>
+
+              <div v-if="macroAnalysis" class="analysis-box" style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: #FF6B9D; font-size: 1.4rem;">
+                  🧠 Phân tích chuyên sâu từ AI
+                </h3>
+                <div class="analysis-content">{{ macroAnalysis }}</div>
+              </div>
+            </div>
+
+            <!-- Chatbot Button -->
+            <div v-if="macroAnalysis" style="margin-top: 2rem; text-align: center;">
+              <button
+                @click="openMacroChatbot"
+                class="btn btn-accent"
+                style="padding: 0.8rem 2rem; font-size: 1rem;"
+              >
+                💬 Hỏi thêm chi tiết về kết quả mô phỏng
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chatbot Component for Macro -->
+        <div v-if="showMacroChatbot" class="chatbot-container">
+          <div class="chatbot-header">
+            <div class="chatbot-title">
+              <span class="chatbot-icon">🤖</span>
+              <span>Trợ lý ảo Agribank</span>
+            </div>
+            <button @click="closeMacroChatbot" class="chatbot-close">✕</button>
+          </div>
+          <div class="chatbot-messages">
+            <div v-if="macroChatMessages.length === 0" class="chatbot-welcome">
+              <p>👋 Xin chào! Tôi là Trợ lý ảo Agribank.</p>
+              <p>Bạn có thể hỏi thêm về kết quả mô phỏng vĩ mô vừa rồi.</p>
+            </div>
+            <div
+              v-for="(message, index) in macroChatMessages"
+              :key="index"
+              class="chat-message"
+              :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+            >
+              {{ message.content }}
+            </div>
+            <div v-if="isMacroChatLoading" class="chat-loading">
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+            </div>
+          </div>
+          <div class="chatbot-input">
+            <input
+              v-model="macroChatInput"
+              @keyup.enter="sendMacroChatMessage"
+              type="text"
+              placeholder="Nhập câu hỏi của bạn..."
+              class="chat-input-field"
+            />
+            <button @click="sendMacroChatMessage" class="chat-send-button" :disabled="!macroChatInput.trim() || isMacroChatLoading">
+              ➤
+            </button>
           </div>
         </div>
       </div>
@@ -1522,7 +1594,7 @@
       <!-- ✅ TAB CONTENT: Cảnh báo Rủi ro Sớm (Early Warning System) -->
       <div v-if="activeTab === 'early-warning'" class="tab-content">
         <div class="card early-warning-card">
-          <h2 class="card-title early-warning-title">⚠️ Cảnh báo Rủi ro Sớm (Early Warning System)</h2>
+          <h2 class="card-title early-warning-title">⚠️ Hệ thống Cảnh báo Rủi ro Sớm</h2>
 
           <!-- Hướng dẫn sử dụng -->
           <div class="info-note" style="background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%); border-left: 4px solid #FF6B6B;">
@@ -1563,17 +1635,17 @@
               :disabled="!ewTrainFile || isEWTraining"
               style="margin-top: 1rem; width: 100%;"
             >
-              {{ isEWTraining ? '⏳ Đang train model...' : '🔄 Train Early Warning Model' }}
+              {{ isEWTraining ? '⏳ Đang huấn luyện mô hình...' : '🔄 Huấn luyện Mô hình Cảnh báo Sớm' }}
             </button>
 
             <!-- Kết quả training -->
             <div v-if="ewTrainResult" style="margin-top: 1.5rem;">
               <h4 style="color: #10B981; font-size: 1.1rem; margin-bottom: 1rem;">✅ Model đã được train thành công!</h4>
               <div class="training-result-box">
-                <p><strong>📊 Số mẫu:</strong> {{ ewTrainResult.num_samples }} (Healthy: {{ ewTrainResult.num_healthy }}, Default: {{ ewTrainResult.num_default }})</p>
+                <p><strong>📊 Số mẫu:</strong> {{ ewTrainResult.num_samples }} (Tốt: {{ ewTrainResult.num_healthy }}, Vỡ nợ: {{ ewTrainResult.num_default }})</p>
 
                 <div style="margin-top: 1rem;">
-                  <strong>🎯 Top 5 Feature Importances:</strong>
+                  <strong>🎯 Top 5 Chỉ số Quan trọng nhất:</strong>
                   <div class="feature-importance-list" style="margin-top: 0.5rem;">
                     <div
                       v-for="(value, key) in getTopFeatureImportances()"
@@ -1588,7 +1660,7 @@
                   </div>
                 </div>
 
-                <p style="margin-top: 1rem;"><strong>🔍 Cluster Distribution:</strong></p>
+                <p style="margin-top: 1rem;"><strong>🔍 Phân bố theo Nhóm:</strong></p>
                 <div v-if="ewTrainResult.cluster_distribution" class="cluster-distribution">
                   <span v-for="(count, cluster) in ewTrainResult.cluster_distribution" :key="cluster" style="margin-right: 1rem;">
                     {{ cluster }}: {{ count }}
@@ -1698,7 +1770,7 @@
 
             <!-- 1. Health Score Gauge -->
             <div class="health-score-section" style="margin-bottom: 3rem;">
-              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;">💚 Health Score</h4>
+              <h4 style="color: #FF6B9D; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;">💚 Điểm Sức khỏe Tài chính</h4>
               <div id="health-score-gauge" style="width: 100%; height: 300px;"></div>
 
               <!-- Risk Level Badge -->
@@ -1799,6 +1871,59 @@
                 <div class="diagnosis-content" v-html="renderMarkdown(ewCheckResult.gemini_diagnosis)"></div>
               </div>
             </div>
+
+            <!-- Chatbot Button -->
+            <div style="margin-top: 2rem; text-align: center;">
+              <button
+                @click="openEWChatbot"
+                class="btn btn-accent"
+                style="padding: 0.8rem 2rem; font-size: 1rem;"
+              >
+                💬 Hỏi thêm chi tiết về kết quả chẩn đoán
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chatbot Component for Early Warning -->
+        <div v-if="showEWChatbot" class="chatbot-container">
+          <div class="chatbot-header">
+            <div class="chatbot-title">
+              <span class="chatbot-icon">🤖</span>
+              <span>Trợ lý ảo Agribank</span>
+            </div>
+            <button @click="closeEWChatbot" class="chatbot-close">✕</button>
+          </div>
+          <div class="chatbot-messages">
+            <div v-if="ewChatMessages.length === 0" class="chatbot-welcome">
+              <p>👋 Xin chào! Tôi là Trợ lý ảo Agribank.</p>
+              <p>Bạn có thể hỏi thêm về kết quả chẩn đoán vừa rồi.</p>
+            </div>
+            <div
+              v-for="(message, index) in ewChatMessages"
+              :key="index"
+              class="chat-message"
+              :class="{ 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant' }"
+            >
+              {{ message.content }}
+            </div>
+            <div v-if="isEWChatLoading" class="chat-loading">
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+              <span class="loading-dot"></span>
+            </div>
+          </div>
+          <div class="chatbot-input">
+            <input
+              v-model="ewChatInput"
+              @keyup.enter="sendEWChatMessage"
+              type="text"
+              placeholder="Nhập câu hỏi của bạn..."
+              class="chat-input-field"
+            />
+            <button @click="sendEWChatMessage" class="chat-send-button" :disabled="!ewChatInput.trim() || isEWChatLoading">
+              ➤
+            </button>
           </div>
         </div>
       </div>
@@ -1920,6 +2045,14 @@ export default {
     const customFx = ref(6.0)
     const isSimulatingMacro = ref(false)
     const macroResult = ref(null)
+    const isAnalyzingMacro = ref(false)
+    const macroAnalysis = ref('')
+
+    // Chatbot - Macro Tab
+    const showMacroChatbot = ref(false)
+    const macroChatMessages = ref([])
+    const macroChatInput = ref('')
+    const isMacroChatLoading = ref(false)
 
     // Early Warning System - NEW FEATURE
     const ewTrainFile = ref(null)
@@ -1933,6 +2066,12 @@ export default {
     const ewIndustryCode = ref('manufacturing')
     const isEWChecking = ref(false)
     const ewCheckResult = ref(null)
+
+    // Chatbot - Early Warning Tab
+    const showEWChatbot = ref(false)
+    const ewChatMessages = ref([])
+    const ewChatInput = ref('')
+    const isEWChatLoading = ref(false)
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -2517,6 +2656,131 @@ export default {
         })
       } finally {
         isDashboardChatLoading.value = false
+      }
+    }
+
+    // Chatbot functionality - Early Warning Tab
+    const openEWChatbot = () => {
+      showEWChatbot.value = true
+    }
+
+    const closeEWChatbot = () => {
+      showEWChatbot.value = false
+    }
+
+    const sendEWChatMessage = async () => {
+      if (!ewChatInput.value.trim() || isEWChatLoading.value) return
+
+      const userMessage = ewChatInput.value
+      ewChatMessages.value.push({
+        role: 'user',
+        content: userMessage
+      })
+      ewChatInput.value = ''
+      isEWChatLoading.value = true
+
+      try {
+        const requestData = {
+          question: userMessage,
+          context: ewCheckResult.value?.gemini_diagnosis || 'Chưa có kết quả chẩn đoán',
+          indicators: indicatorsDict.value || {},
+          prediction: {
+            health_score: ewCheckResult.value?.health_score,
+            risk_level: ewCheckResult.value?.risk_level_text,
+            current_pd: ewCheckResult.value?.current_pd
+          }
+        }
+
+        const response = await axios.post(`${API_BASE}/chat-assistant`, requestData)
+
+        if (response.data.status === 'success') {
+          ewChatMessages.value.push({
+            role: 'assistant',
+            content: response.data.answer
+          })
+        }
+      } catch (error) {
+        ewChatMessages.value.push({
+          role: 'assistant',
+          content: '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.'
+        })
+      } finally {
+        isEWChatLoading.value = false
+      }
+    }
+
+    // Chatbot functionality - Macro Tab
+    const openMacroChatbot = () => {
+      showMacroChatbot.value = true
+    }
+
+    const closeMacroChatbot = () => {
+      showMacroChatbot.value = false
+    }
+
+    const sendMacroChatMessage = async () => {
+      if (!macroChatInput.value.trim() || isMacroChatLoading.value) return
+
+      const userMessage = macroChatInput.value
+      macroChatMessages.value.push({
+        role: 'user',
+        content: userMessage
+      })
+      macroChatInput.value = ''
+      isMacroChatLoading.value = true
+
+      try {
+        const requestData = {
+          question: userMessage,
+          context: macroAnalysis.value || 'Chưa có phân tích vĩ mô',
+          indicators: macroResult.value?.indicators_after || {},
+          prediction: macroResult.value?.prediction_after || {}
+        }
+
+        const response = await axios.post(`${API_BASE}/chat-assistant`, requestData)
+
+        if (response.data.status === 'success') {
+          macroChatMessages.value.push({
+            role: 'assistant',
+            content: response.data.answer
+          })
+        }
+      } catch (error) {
+        macroChatMessages.value.push({
+          role: 'assistant',
+          content: '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.'
+        })
+      } finally {
+        isMacroChatLoading.value = false
+      }
+    }
+
+    // Gemini Analysis for Macro Tab
+    const analyzeMacro = async () => {
+      if (!macroResult.value) return
+
+      isAnalyzingMacro.value = true
+      macroAnalysis.value = ''
+
+      try {
+        const requestData = {
+          indicators_before: macroResult.value.indicators_before,
+          indicators_after: macroResult.value.indicators_after,
+          prediction_before: macroResult.value.prediction_before,
+          prediction_after: macroResult.value.prediction_after,
+          scenario_info: macroResult.value.scenario_info,
+          pd_change: macroResult.value.pd_change
+        }
+
+        const response = await axios.post(`${API_BASE}/analyze-macro`, requestData)
+
+        if (response.data.status === 'success') {
+          macroAnalysis.value = response.data.analysis
+        }
+      } catch (error) {
+        alert('❌ Lỗi khi phân tích: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isAnalyzingMacro.value = false
       }
     }
 
@@ -3417,9 +3681,20 @@ export default {
       customFx,
       isSimulatingMacro,
       macroResult,
+      isAnalyzingMacro,
+      macroAnalysis,
       handleMacroFile,
       canRunMacroSimulation,
       runMacroSimulation,
+      analyzeMacro,
+      // Chatbot - Macro
+      showMacroChatbot,
+      macroChatMessages,
+      macroChatInput,
+      isMacroChatLoading,
+      openMacroChatbot,
+      closeMacroChatbot,
+      sendMacroChatMessage,
       // Early Warning System - NEW FEATURE
       ewTrainFile,
       ewTrainFileName,
@@ -3439,7 +3714,15 @@ export default {
       renderEWCharts,
       getTopFeatureImportances,
       getSeverityLabel,
-      renderMarkdown
+      renderMarkdown,
+      // Chatbot - Early Warning
+      showEWChatbot,
+      ewChatMessages,
+      ewChatInput,
+      isEWChatLoading,
+      openEWChatbot,
+      closeEWChatbot,
+      sendEWChatMessage
     }
   }
 }

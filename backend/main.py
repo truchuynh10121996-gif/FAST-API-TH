@@ -1203,6 +1203,116 @@ async def simulate_scenario_macro(
         raise HTTPException(status_code=500, detail=f"Lỗi khi mô phỏng kịch bản vĩ mô: {str(e)}")
 
 
+@app.post("/analyze-macro")
+async def analyze_macro(request_data: Dict[str, Any]):
+    """
+    Endpoint phân tích kết quả mô phỏng vĩ mô bằng Gemini API
+
+    Args:
+        request_data: Dict chứa kết quả mô phỏng vĩ mô
+
+    Returns:
+        Dict chứa kết quả phân tích từ Gemini
+    """
+    try:
+        # Lấy Gemini analyzer
+        analyzer = get_gemini_analyzer()
+
+        # Lấy thông tin từ request
+        scenario_info = request_data.get('scenario_info', {})
+        macro_variables = request_data.get('macro_variables', {})
+        micro_shocks = request_data.get('micro_shocks', {})
+        indicators_before = request_data.get('indicators_before_dict', {})
+        indicators_after = request_data.get('indicators_after_dict', {})
+        pd_change = request_data.get('pd_change', {})
+
+        # Tạo prompt cho Gemini
+        prompt = f"""
+Bạn là chuyên gia phân tích kinh tế vĩ mô và rủi ro tín dụng của Agribank. Hãy phân tích kết quả mô phỏng kịch bản vĩ mô dưới đây.
+
+**THÔNG TIN KỊCH BẢN VĨ MÔ:**
+
+**Kịch bản:** {scenario_info.get('name', 'N/A')}
+**Ngành:** {scenario_info.get('industry', 'N/A')}
+
+**5 BIẾN VĨ MÔ:**
+- Tăng trưởng GDP: {macro_variables.get('gdp_growth_pct', 0):.1f}%
+- Lạm phát CPI: {macro_variables.get('inflation_cpi_pct', 0):.1f}%
+- Lạm phát PPI: {macro_variables.get('inflation_ppi_pct', 0):.1f}%
+- Thay đổi lãi suất NHNN: {macro_variables.get('policy_rate_change_bps', 0):.0f} bps
+- Thay đổi tỷ giá USD/VND: {macro_variables.get('fx_usd_vnd_pct', 0):.1f}%
+
+**4 BIẾN VI MÔ (Kênh truyền dẫn):**
+- Thay đổi doanh thu: {micro_shocks.get('revenue_change_pct', 0):.2f}%
+- Thay đổi lãi suất vay: {micro_shocks.get('interest_rate_change_pct', 0):.2f}%
+- Thay đổi giá vốn hàng bán: {micro_shocks.get('cogs_change_pct', 0):.2f}%
+- Sốc thanh khoản: {micro_shocks.get('liquidity_shock_pct', 0):.2f}%
+
+**TÁC ĐỘNG ĐẾN XÁC SUẤT VỠ NỢ:**
+- PD trước: {pd_change.get('before', 0):.4f}
+- PD sau: {pd_change.get('after', 0):.4f}
+- Thay đổi: {pd_change.get('change_pct', 0):.2f}% (tuyệt đối: {pd_change.get('change_absolute', 0):.4f})
+
+**YÊU CẦU PHÂN TÍCH:**
+
+Hãy viết báo cáo phân tích chi tiết (sử dụng Markdown) với cấu trúc sau:
+
+## 📊 TỔNG QUAN KỊCH BẢN VĨ MÔ
+(2-3 câu mô tả kịch bản vĩ mô và mức độ nghiêm trọng)
+
+## 🔄 PHÂN TÍCH KÊNH TRUYỀN DẪN
+(Giải thích cách 5 biến vĩ mô tác động lên 4 biến vi mô của doanh nghiệp)
+
+### Tác động lên Doanh thu
+(Phân tích chi tiết)
+
+### Tác động lên Chi phí & Lãi suất
+(Phân tích chi tiết)
+
+### Tác động lên Thanh khoản
+(Phân tích chi tiết)
+
+## 📈 ĐÁNH GIÁ TÁC ĐỘNG ĐẾN PD
+
+### Mức độ thay đổi
+(Phân tích mức độ thay đổi PD: nhẹ/trung bình/nghiêm trọng)
+
+### Các chỉ số tài chính chịu ảnh hưởng nhiều nhất
+(Liệt kê 3-5 chỉ số bị ảnh hưởng mạnh nhất)
+
+## 💡 KHUYẾN NGHỊ
+
+### Đối với Doanh nghiệp
+(2-3 khuyến nghị cụ thể)
+
+### Đối với Ngân hàng
+(2-3 khuyến nghị về chính sách tín dụng)
+
+## ⚠️ RỦI RO CẦN LƯU Ý
+(Liệt kê 2-3 rủi ro tiềm ẩn cần theo dõi)
+
+---
+**Lưu ý:** Viết ngắn gọn, chuyên nghiệp, dễ hiểu. Tập trung vào insights và actionable recommendations.
+"""
+
+        # Gọi Gemini API
+        response = analyzer.model.generate_content(prompt)
+        analysis = response.text
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Không tìm thấy GEMINI_API_KEY. Vui lòng set biến môi trường. Chi tiết: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích vĩ mô bằng Gemini: {str(e)}")
+
+
 @app.post("/train-early-warning-model")
 async def train_early_warning_model(file: UploadFile = File(...)):
     """
@@ -1359,11 +1469,10 @@ async def early_warning_check(
         # 3. PHÂN LOẠI MỨC RỦI RO
         risk_info = early_warning_system.classify_risk_level(health_score)
 
-        # 4. TÍNH PD HIỆN TẠI
+        # 4. TÍNH PD HIỆN TẠI (sử dụng early_warning_system.stacking_model)
         feature_cols = [f'X_{i}' for i in range(1, 15)]
-        X_current = pd.DataFrame([[indicators[col] for col in feature_cols]], columns=feature_cols)
-        prediction = credit_model.predict(X_current)
-        current_pd = prediction['pd_stacking']
+        X_current = [[indicators[col] for col in feature_cols]]
+        current_pd = early_warning_system.stacking_model.predict_proba(X_current)[0, 1] * 100
 
         # 5. PHÁT HIỆN ĐIỂM YẾU
         weaknesses = early_warning_system.detect_weaknesses(indicators)

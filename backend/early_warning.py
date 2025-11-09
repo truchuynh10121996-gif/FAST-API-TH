@@ -161,7 +161,7 @@ class EarlyWarningSystem:
         print("✅ K-Means trained!")
         print(f"   Cluster sizes: {[self.cluster_info[i]['size'] for i in range(4)]}")
 
-        # 3. TÍNH NGƯỠNG AN TOÀN (percentile P25, P50, P75 của nhóm label=0)
+        # 3. TÍNH NGƯỠNG AN TOÀN (percentile P40, P50, P60 của nhóm label=0)
         print("📏 Calculating safety thresholds...")
 
         df_healthy = df[df['label'] == 0]
@@ -174,19 +174,19 @@ class EarlyWarningSystem:
             # Chỉ số càng thấp càng tốt: X_5, X_6, X_13
 
             if col in ['X_5', 'X_6', 'X_13']:
-                # Càng thấp càng tốt → ngưỡng an toàn là P75 (không vượt quá)
+                # Càng thấp càng tốt → ngưỡng an toàn là P60 (không vượt quá)
                 self.thresholds[col] = {
-                    'safe_zone': float(df_healthy[col].quantile(0.25)),
+                    'safe_zone': float(df_healthy[col].quantile(0.40)),
                     'watch_zone': float(df_healthy[col].quantile(0.50)),
-                    'warning_zone': float(df_healthy[col].quantile(0.75)),
+                    'warning_zone': float(df_healthy[col].quantile(0.60)),
                     'direction': 'lower_is_better'
                 }
             else:
-                # Càng cao càng tốt → ngưỡng an toàn là P25 (không thấp hơn)
+                # Càng cao càng tốt → ngưỡng an toàn là P40 (không thấp hơn)
                 self.thresholds[col] = {
-                    'safe_zone': float(df_healthy[col].quantile(0.75)),
+                    'safe_zone': float(df_healthy[col].quantile(0.60)),
                     'watch_zone': float(df_healthy[col].quantile(0.50)),
-                    'warning_zone': float(df_healthy[col].quantile(0.25)),
+                    'warning_zone': float(df_healthy[col].quantile(0.40)),
                     'direction': 'higher_is_better'
                 }
 
@@ -209,7 +209,7 @@ class EarlyWarningSystem:
 
     def calculate_health_score(self, indicators: Dict[str, float]) -> float:
         """
-        Tính Health Score (0-100) dựa trên 14 chỉ số và feature importances
+        Tính Health Score (0-100) dựa trên 60% PD + 40% Statistical
 
         Args:
             indicators: Dict chứa 14 chỉ số (X_1 → X_14)
@@ -218,12 +218,17 @@ class EarlyWarningSystem:
             Health Score (0-100)
 
         Công thức:
-            1. Normalize 14 chỉ số về [0, 1] dựa trên thresholds
-            2. Health Score = Σ(normalized_Xi × importance_Xi) × 100
+            1. Tính Statistical Score dựa trên thresholds và feature importances
+            2. Tính PD Score từ stacking_model
+            3. Health Score = 60% * (100 - PD) + 40% * Statistical Score
         """
         if not self.feature_importances:
             raise ValueError("Model chưa được train. Vui lòng gọi train_models() trước.")
 
+        if self.stacking_model is None:
+            raise ValueError("Stacking model chưa được train. Vui lòng gọi train_models() trước.")
+
+        # 1. TÍNH STATISTICAL SCORE (40%)
         total_score = 0.0
         total_weight = 0.0
 
@@ -262,8 +267,20 @@ class EarlyWarningSystem:
             total_score += normalized * importance
             total_weight += importance
 
-        # Tính health score
-        health_score = (total_score / total_weight * 100) if total_weight > 0 else 50.0
+        # Statistical score (0-100)
+        statistical_score = (total_score / total_weight * 100) if total_weight > 0 else 50.0
+        statistical_score = max(0.0, min(100.0, statistical_score))
+
+        # 2. TÍNH PD SCORE (60%)
+        feature_cols = [f'X_{i}' for i in range(1, 15)]
+        X_input = [[indicators[col] for col in feature_cols]]
+        pd_value = self.stacking_model.predict_proba(X_input)[0, 1] * 100  # PD in %
+
+        # PD Score: 100 - PD (PD càng thấp → score càng cao)
+        pd_score = max(0.0, min(100.0, 100 - pd_value))
+
+        # 3. KẾT HỢP: 60% PD + 40% Statistical
+        health_score = 0.6 * pd_score + 0.4 * statistical_score
 
         # Giới hạn trong [0, 100]
         health_score = max(0.0, min(100.0, health_score))
