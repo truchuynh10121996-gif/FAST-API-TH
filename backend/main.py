@@ -1751,6 +1751,8 @@ async def train_survival_model(file: UploadFile = File(...)):
         - median_survival_time: Median time-to-default (tháng)
     """
     try:
+        print(f"📥 Nhận request train survival model: {file.filename}")
+
         # Kiểm tra file extension
         if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
             raise HTTPException(
@@ -1765,12 +1767,17 @@ async def train_survival_model(file: UploadFile = File(...)):
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
 
+        print(f"📂 Đã lưu file tạm: {tmp_file_path}")
+
         try:
             # Đọc file
+            print(f"📖 Đang đọc file {suffix}...")
             if suffix == '.csv':
                 df = pd.read_csv(tmp_file_path)
             else:
                 df = pd.read_excel(tmp_file_path)
+
+            print(f"✅ Đọc thành công {len(df)} dòng dữ liệu")
 
             # Kiểm tra các cột cần thiết
             required_cols = [f'X_{i}' for i in range(1, 15)] + ['default']
@@ -1782,11 +1789,17 @@ async def train_survival_model(file: UploadFile = File(...)):
                     detail=f"File thiếu các cột: {', '.join(missing_cols)}"
                 )
 
+            print("🚀 Bắt đầu train Survival Analysis System...")
+
             # Train Survival Analysis System
             result = survival_system.train_models(df)
 
+            print("💾 Đang lưu models...")
+
             # Lưu models
             survival_system.save_models("survival_models")
+
+            print("✅ Train và lưu models thành công!")
 
             return {
                 "status": "success",
@@ -1798,12 +1811,17 @@ async def train_survival_model(file: UploadFile = File(...)):
             # Xóa file tạm
             try:
                 os.unlink(tmp_file_path)
+                print(f"🗑️ Đã xóa file tạm: {tmp_file_path}")
             except Exception:
                 pass
 
     except ValueError as e:
+        print(f"❌ ValueError: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print(f"❌ Exception: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Lỗi khi train Survival Analysis System: {str(e)}")
 
 
