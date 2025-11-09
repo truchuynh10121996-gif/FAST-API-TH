@@ -4559,7 +4559,8 @@ export default {
         const response = await axios.post(`${API_BASE}/train-survival-model`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          timeout: 300000 // 5 phút timeout cho việc train model
         })
 
         survivalTrainResult.value = response.data
@@ -4614,7 +4615,8 @@ export default {
         const response = await axios.post(`${API_BASE}/predict-survival`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          timeout: 120000 // 2 phút timeout cho việc dự báo survival curve
         })
 
         survivalPredictResult.value = response.data
@@ -4740,7 +4742,9 @@ export default {
       isLoadingHazards.value = true
 
       try {
-        const response = await axios.get(`${API_BASE}/survival-metrics`)
+        const response = await axios.get(`${API_BASE}/survival-metrics`, {
+          timeout: 60000 // 1 phút timeout
+        })
         hazardRatios.value = response.data.hazard_ratios
       } catch (error) {
         console.error('Error loading hazard ratios:', error)
@@ -4773,7 +4777,9 @@ export default {
           }
         }
 
-        const response = await axios.post(`${API_BASE}/analyze-survival`, requestData)
+        const response = await axios.post(`${API_BASE}/analyze-survival`, requestData, {
+          timeout: 120000 // 2 phút timeout cho Gemini analysis
+        })
         survivalGeminiAnalysis.value = response.data.analysis
 
       } catch (error) {
