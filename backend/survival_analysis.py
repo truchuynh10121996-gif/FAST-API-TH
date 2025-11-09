@@ -68,7 +68,7 @@ class SurvivalAnalysisSystem:
         df_prepared = df.copy()
 
         # Kiểm tra xem đã có cột months_to_default chưa
-        if 'months_to_default' not in df_prepared.columns:
+        #if 'months_to_default' not in df_prepared.columns:
             print("⚠️ Chưa có cột months_to_default, tạo synthetic data...")
 
             # Tạo synthetic data

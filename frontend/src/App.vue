@@ -4556,7 +4556,7 @@ export default {
         const formData = new FormData()
         formData.append('file', survivalTrainFile.value)
 
-        const response = await axios.post(`${API_URL}/train-survival-model`, formData, {
+        const response = await axios.post(`${API_URL}/train`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }

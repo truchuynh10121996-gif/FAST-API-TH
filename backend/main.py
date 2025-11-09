@@ -24,7 +24,7 @@ from excel_processor import excel_processor
 from report_generator import ReportGenerator
 from early_warning import early_warning_system
 from anomaly_detection import anomaly_system
-from survival_analysis import survival_system
+# from survival_analysis import survival_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -1783,10 +1783,10 @@ async def train_survival_model(file: UploadFile = File(...)):
                 )
 
             # Train Survival Analysis System
-            result = survival_system.train_models(df)
+            #result = survival_system.train_models(df)
 
             # Lưu models
-            survival_system.save_models("survival_models")
+            #survival_system.save_models("survival_models")
 
             return {
                 "status": "success",
@@ -1834,10 +1834,10 @@ async def predict_survival(
         import json
 
         # Kiểm tra Survival System đã được train chưa
-        if survival_system.cox_model is None:
+        #if survival_system.cox_model is None:
             # Thử load từ file
-            if os.path.exists("survival_models_cox.pkl"):
-                survival_system.load_models("survival_models")
+           if os.path.exists("survival_models_cox.pkl"):
+                #survival_system.load_models("survival_models")
             else:
                 raise HTTPException(
                     status_code=400,
@@ -1878,7 +1878,7 @@ async def predict_survival(
             )
 
         # 2. DỰ BÁO SURVIVAL CURVE
-        result = survival_system.predict_survival_curve(indicators, model_type=model_type)
+        #result = survival_system.predict_survival_curve(indicators, model_type=model_type)
 
         return {
             "status": "success",
@@ -1904,10 +1904,10 @@ async def get_survival_metrics():
     """
     try:
         # Kiểm tra Survival System đã được train chưa
-        if survival_system.cox_model is None:
+        #if survival_system.cox_model is None:
             # Thử load từ file
             if os.path.exists("survival_models_cox.pkl"):
-                survival_system.load_models("survival_models")
+                #survival_system.load_models("survival_models")
             else:
                 raise HTTPException(
                     status_code=400,
@@ -1915,10 +1915,10 @@ async def get_survival_metrics():
                 )
 
         # Lấy hazard ratios
-        hazard_ratios = survival_system.get_hazard_ratios()
+        #hazard_ratios = survival_system.get_hazard_ratios()
 
         # Lấy C-index
-        c_index = survival_system.cox_model.concordance_index_
+        #c_index = survival_system.cox_model.concordance_index_
 
         return {
             "status": "success",
@@ -1951,10 +1951,10 @@ async def compare_survival(request_data: Dict[str, Any]):
     """
     try:
         # Kiểm tra Survival System đã được train chưa
-        if survival_system.cox_model is None:
+        #if survival_system.cox_model is None:
             # Thử load từ file
             if os.path.exists("survival_models_cox.pkl"):
-                survival_system.load_models("survival_models")
+                #survival_system.load_models("survival_models")
             else:
                 raise HTTPException(
                     status_code=400,
@@ -1967,7 +1967,7 @@ async def compare_survival(request_data: Dict[str, Any]):
             raise HTTPException(status_code=400, detail="Danh sách indicators_list không được rỗng")
 
         # So sánh survival curves
-        result = survival_system.compare_survival_curves(indicators_list)
+        #result = survival_system.compare_survival_curves(indicators_list)
 
         return {
             "status": "success",
@@ -2005,7 +2005,7 @@ async def analyze_survival(request_data: Dict[str, Any]):
             )
 
         # Tạo phân tích bằng Gemini AI
-        analysis = survival_system.generate_gemini_analysis(
+        #analysis = survival_system.generate_gemini_analysis(
             indicators=indicators,
             survival_result=survival_result,
             gemini_api_key=GEMINI_API_KEY
