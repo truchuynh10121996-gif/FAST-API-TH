@@ -1738,7 +1738,7 @@ async def train_survival_model(file: UploadFile = File(...)):
 
     Args:
         file: File Excel/CSV chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'default' (0/1)
-              + cột 'months_to_default' (optional, sẽ tạo synthetic nếu chưa có)
+              + cột 'months_to_default' (BẮT BUỘC)
 
     Returns:
         Dict chứa thông tin về training:
@@ -1834,15 +1834,17 @@ async def predict_survival(
         import json
 
         # Kiểm tra Survival System đã được train chưa
-        #if survival_system.cox_model is None:
-            # Thử load từ file
-           if os.path.exists("survival_models_cox.pkl"):
-                #survival_system.load_models("survival_models")
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
-                )
+        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
+        # Uncomment dòng dưới khi muốn sử dụng survival system
+        # if survival_system.cox_model is None:
+        #     # Thử load từ file
+        #     if os.path.exists("survival_models_cox.pkl"):
+        #         survival_system.load_models("survival_models")
+        #     else:
+        raise HTTPException(
+            status_code=400,
+            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
+        )
 
         # 1. LẤY 14 CHỈ SỐ
         indicators = {}
@@ -1903,28 +1905,11 @@ async def get_survival_metrics():
         - c_index: Concordance index
     """
     try:
-        # Kiểm tra Survival System đã được train chưa
-        #if survival_system.cox_model is None:
-            # Thử load từ file
-            if os.path.exists("survival_models_cox.pkl"):
-                #survival_system.load_models("survival_models")
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
-                )
-
-        # Lấy hazard ratios
-        #hazard_ratios = survival_system.get_hazard_ratios()
-
-        # Lấy C-index
-        #c_index = survival_system.cox_model.concordance_index_
-
-        return {
-            "status": "success",
-            "hazard_ratios": hazard_ratios,
-            "c_index": round(c_index, 4)
-        }
+        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
+        raise HTTPException(
+            status_code=400,
+            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1950,29 +1935,11 @@ async def compare_survival(request_data: Dict[str, Any]):
         Dict chứa comparison_data để vẽ chart
     """
     try:
-        # Kiểm tra Survival System đã được train chưa
-        #if survival_system.cox_model is None:
-            # Thử load từ file
-            if os.path.exists("survival_models_cox.pkl"):
-                #survival_system.load_models("survival_models")
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Survival System chưa được train. Vui lòng upload file training data trước."
-                )
-
-        indicators_list = request_data.get('indicators_list', [])
-
-        if len(indicators_list) == 0:
-            raise HTTPException(status_code=400, detail="Danh sách indicators_list không được rỗng")
-
-        # So sánh survival curves
-        #result = survival_system.compare_survival_curves(indicators_list)
-
-        return {
-            "status": "success",
-            **result
-        }
+        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
+        raise HTTPException(
+            status_code=400,
+            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1995,26 +1962,11 @@ async def analyze_survival(request_data: Dict[str, Any]):
         Dict chứa analysis từ Gemini
     """
     try:
-        indicators = request_data.get('indicators', {})
-        survival_result = request_data.get('survival_result', {})
-
-        if not indicators or not survival_result:
-            raise HTTPException(
-                status_code=400,
-                detail="Thiếu thông tin indicators hoặc survival_result"
-            )
-
-        # Tạo phân tích bằng Gemini AI
-        #analysis = survival_system.generate_gemini_analysis(
-            indicators=indicators,
-            survival_result=survival_result,
-            gemini_api_key=GEMINI_API_KEY
+        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
+        raise HTTPException(
+            status_code=400,
+            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
         )
-
-        return {
-            "status": "success",
-            "analysis": analysis
-        }
 
     except ValueError as e:
         raise HTTPException(

@@ -57,10 +57,10 @@ class SurvivalAnalysisSystem:
     def prepare_data_with_time(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Chuẩn bị dữ liệu với cột months_to_default
-        Nếu chưa có, tạo synthetic data
+        YÊU CẦU: File dữ liệu phải có sẵn cột 'months_to_default'
 
         Args:
-            df: DataFrame chứa 14 chỉ số (X_1 → X_14) + cột 'default'
+            df: DataFrame chứa 14 chỉ số (X_1 → X_14) + cột 'default' + cột 'months_to_default'
 
         Returns:
             DataFrame với cột months_to_default
@@ -68,50 +68,13 @@ class SurvivalAnalysisSystem:
         df_prepared = df.copy()
 
         # Kiểm tra xem đã có cột months_to_default chưa
-        #if 'months_to_default' not in df_prepared.columns:
-            print("⚠️ Chưa có cột months_to_default, tạo synthetic data...")
-
-            # Tạo synthetic data
-            df_prepared['months_to_default'] = df_prepared.apply(
-                lambda row: self._generate_months_to_default(row), axis=1
+        if 'months_to_default' not in df_prepared.columns:
+            raise ValueError(
+                "File dữ liệu thiếu cột 'months_to_default'. "
+                "Vui lòng thêm cột này vào file Excel/CSV trước khi train model."
             )
 
         return df_prepared
-
-    def _generate_months_to_default(self, row: pd.Series) -> int:
-        """
-        Tạo months_to_default synthetic
-
-        Args:
-            row: Dòng dữ liệu
-
-        Returns:
-            months_to_default: Số tháng đến khi vỡ nợ (hoặc censored)
-        """
-        if row['default'] == 1:
-            # DN vỡ nợ: Random 6-36 tháng
-            # DN có chỉ số tệ hơn → vỡ nợ sớm hơn
-            # Dùng PD từ các chỉ số để ước lượng
-
-            # Tính risk score đơn giản từ 14 chỉ số
-            risk_score = (
-                -row['X_1'] - row['X_2'] - row['X_3'] - row['X_4']  # Sinh lời thấp → rủi ro cao
-                + row['X_5'] + row['X_6']  # Nợ cao → rủi ro cao
-                - row['X_7'] - row['X_8']  # Thanh khoản thấp → rủi ro cao
-                - row['X_9'] - row['X_10']  # Trả nợ kém → rủi ro cao
-            )
-
-            # Normalize risk_score về [0, 1]
-            # Risk score cao → vỡ nợ sớm
-            base_months = 21  # 21 tháng trung bình
-            noise = np.random.randint(-9, 9)  # +/- 9 tháng noise
-
-            # Risk score càng cao, months càng thấp
-            months = max(6, min(36, base_months + noise - int(risk_score * 3)))
-            return months
-        else:
-            # DN không vỡ nợ: Censored tại 36 tháng
-            return 36
 
     def train_models(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
