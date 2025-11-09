@@ -23,6 +23,7 @@ from gemini_api import get_gemini_analyzer
 from excel_processor import excel_processor
 from report_generator import ReportGenerator
 from early_warning import early_warning_system
+from anomaly_detection import anomaly_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -1532,6 +1533,199 @@ async def early_warning_check(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra cảnh báo rủi ro: {str(e)}")
+
+
+@app.post("/train-anomaly-model")
+async def train_anomaly_model(file: UploadFile = File(...)):
+    """
+    Endpoint huấn luyện Anomaly Detection System
+
+    Args:
+        file: File Excel/CSV chứa 1300 DN với 14 chỉ số (X_1 → X_14) + cột 'label' (0=khỏe mạnh, 1=vỡ nợ)
+
+    Returns:
+        Dict chứa thông tin về training:
+        - status: success
+        - feature_statistics: Thống kê 14 features (P5, P25, P50, P75, P95)
+        - contamination_rate: Tỷ lệ contamination
+    """
+    try:
+        # Kiểm tra file extension
+        if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            raise HTTPException(
+                status_code=400,
+                detail="File phải có định dạng XLSX, XLS hoặc CSV"
+            )
+
+        # Lưu file tạm
+        suffix = '.xlsx' if file.filename.endswith(('.xlsx', '.xls')) else '.csv'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # Đọc file
+            if suffix == '.csv':
+                df = pd.read_csv(tmp_file_path)
+            else:
+                df = pd.read_excel(tmp_file_path)
+
+            # Kiểm tra các cột cần thiết
+            required_cols = [f'X_{i}' for i in range(1, 15)] + ['label']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+
+            if missing_cols:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File thiếu các cột: {', '.join(missing_cols)}"
+                )
+
+            # Train Anomaly Detection System
+            result = anomaly_system.train_model(df)
+
+            return {
+                "status": "success",
+                "message": "Anomaly Detection System trained successfully!",
+                **result
+            }
+
+        finally:
+            # Xóa file tạm
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi train Anomaly Detection System: {str(e)}")
+
+
+@app.post("/check-anomaly")
+async def check_anomaly(
+    file: Optional[UploadFile] = File(None),
+    indicators_json: Optional[str] = Form(None)
+):
+    """
+    Endpoint kiểm tra bất thường cho DN mới
+
+    Args:
+        file: File Excel (nếu tải file mới) - Optional
+        indicators_json: JSON string chứa 14 chỉ số (nếu dùng dữ liệu từ Tab Dự báo PD) - Optional
+
+    Returns:
+        Dict chứa:
+        - anomaly_score: Điểm bất thường (0-100)
+        - risk_level: Mức rủi ro
+        - abnormal_features: List các features bất thường
+        - anomaly_type: Loại bất thường
+        - gemini_explanation: Giải thích từ Gemini AI
+        - comparison_with_healthy: So sánh với DN khỏe mạnh
+    """
+    try:
+        import json
+
+        # Kiểm tra Anomaly Detection System đã được train chưa
+        if anomaly_system.model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Anomaly Detection System chưa được train. Vui lòng upload file training data trước."
+            )
+
+        # 1. LẤY 14 CHỈ SỐ
+        indicators = {}
+
+        if file:
+            # Trường hợp 1: Tải file XLSX mới
+            if not file.filename.endswith(('.xlsx', '.xls')):
+                raise HTTPException(status_code=400, detail="File phải có định dạng XLSX hoặc XLS")
+
+            # Lưu file tạm
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
+                tmp_file_path = tmp_file.name
+
+            try:
+                # Đọc file XLSX và tính 14 chỉ số
+                excel_processor.read_excel(tmp_file_path)
+                indicators = excel_processor.calculate_14_indicators()
+            finally:
+                try:
+                    os.unlink(tmp_file_path)
+                except Exception:
+                    pass
+
+        elif indicators_json:
+            # Trường hợp 2: Sử dụng dữ liệu từ Tab Dự báo PD
+            indicators = json.loads(indicators_json)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng cung cấp file XLSX hoặc dữ liệu từ Tab Dự báo PD"
+            )
+
+        # 2. TÍNH ANOMALY SCORE
+        anomaly_score = anomaly_system.calculate_anomaly_score(indicators)
+
+        # 3. PHÁT HIỆN CÁC FEATURES BẤT THƯỜNG
+        abnormal_features = anomaly_system.detect_abnormal_features(indicators)
+
+        # 4. PHÂN LOẠI LOẠI BẤT THƯỜNG
+        anomaly_type = anomaly_system.classify_anomaly_type(indicators, abnormal_features)
+
+        # 5. XÁC ĐỊNH MỨC RỦI RO
+        if anomaly_score < 60:
+            risk_level = "Bình thường"
+            risk_level_color = "#10B981"
+            risk_level_icon = "⚠️"
+        elif anomaly_score < 80:
+            risk_level = "Bất thường Trung bình"
+            risk_level_color = "#F59E0B"
+            risk_level_icon = "🔶"
+        else:
+            risk_level = "Bất thường Cao"
+            risk_level_color = "#EF4444"
+            risk_level_icon = "🔴"
+
+        # 6. TẠO GIẢI THÍCH BẰNG GEMINI AI
+        gemini_explanation = anomaly_system.generate_gemini_explanation(
+            indicators=indicators,
+            anomaly_score=anomaly_score,
+            abnormal_features=abnormal_features,
+            anomaly_type=anomaly_type,
+            gemini_api_key=GEMINI_API_KEY
+        )
+
+        # 7. SO SÁNH VỚI DN KHỎE MẠNH (cho Radar Chart)
+        comparison_with_healthy = []
+        for feature in anomaly_system.feature_names:
+            comparison_with_healthy.append({
+                'feature': anomaly_system.indicator_names[feature],
+                'current': indicators[feature],
+                'healthy_mean': anomaly_system.healthy_stats[feature]['mean']
+            })
+
+        # 8. TRẢ VỀ KẾT QUẢ
+        return {
+            "status": "success",
+            "anomaly_score": anomaly_score,
+            "risk_level": risk_level,
+            "risk_level_color": risk_level_color,
+            "risk_level_icon": risk_level_icon,
+            "abnormal_features": abnormal_features,
+            "anomaly_type": anomaly_type,
+            "gemini_explanation": gemini_explanation,
+            "comparison_with_healthy": comparison_with_healthy,
+            "indicators": indicators
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi kiểm tra bất thường: {str(e)}")
 
 
 # ================================================================================================

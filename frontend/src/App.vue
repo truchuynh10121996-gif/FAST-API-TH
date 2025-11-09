@@ -79,6 +79,14 @@
       >
         ⚠️ Cảnh báo Rủi ro Sớm
       </button>
+      <button
+        @click="activeTab = 'anomaly'"
+        class="tab-button"
+        :class="{ active: activeTab === 'anomaly' }"
+        style="background: linear-gradient(135deg, #FF4444 0%, #FF8844 100%); color: white; font-weight: 700;"
+      >
+        🚨 Phát hiện Gian lận
+      </button>
     </div>
 
     <!-- Main Container -->
@@ -1927,6 +1935,292 @@
           </div>
         </div>
       </div>
+
+      <!-- ✅ TAB CONTENT: Phát hiện Gian lận (Anomaly Detection) -->
+      <div v-if="activeTab === 'anomaly'" class="tab-content">
+        <div class="card anomaly-card">
+          <h2 class="card-title" style="color: #FF4444; font-size: 1.8rem; text-align: center;">🚨 Hệ thống Phát hiện Bất thường</h2>
+
+          <!-- Hướng dẫn sử dụng -->
+          <div class="info-note" style="background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%); border-left: 4px solid #FF4444;">
+            <span class="note-icon">📋</span>
+            <span class="note-text">
+              <strong>Mục đích:</strong> Phát hiện doanh nghiệp có hành vi tài chính bất thường, nghi ngờ gian lận hoặc báo cáo sai lệch bằng Isolation Forest và Gemini AI.
+              <br><strong>Cách sử dụng:</strong>
+              <strong>Bước 1:</strong> Train model với file 1300 DN (có cột label: 0=khỏe mạnh, 1=vỡ nợ) →
+              <strong>Bước 2:</strong> Upload DN cần kiểm tra hoặc dùng dữ liệu từ Tab Dự báo PD →
+              <strong>Bước 3:</strong> Xem kết quả phân tích bất thường chi tiết.
+            </span>
+          </div>
+
+          <!-- BƯỚC 1: Upload Model Training Data -->
+          <div class="anomaly-section" style="margin: 2rem 0;">
+            <h3 class="section-title" style="color: #FF4444; font-size: 1.3rem; margin-bottom: 1rem;">
+              🔄 Bước 1: Train Model Phát hiện Bất thường
+            </h3>
+
+            <div class="upload-area" @click="$refs.anomalyTrainFileInput.click()" style="cursor: pointer;">
+              <div class="upload-icon">📊</div>
+              <p class="upload-text">{{ anomalyTrainFileName || 'Tải lên file dữ liệu 1300 DN (CSV/Excel)' }}</p>
+              <p class="upload-hint">
+                File phải có 14 chỉ số (X_1 → X_14) + cột 'label' (0=khỏe mạnh, 1=vỡ nợ)
+              </p>
+            </div>
+            <input
+              ref="anomalyTrainFileInput"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              @change="handleAnomalyTrainFile"
+              style="display: none"
+            />
+
+            <button
+              @click="trainAnomalyModel"
+              class="btn btn-primary"
+              :disabled="!anomalyTrainFile || isAnomalyTraining"
+              style="margin-top: 1rem; width: 100%;"
+            >
+              {{ isAnomalyTraining ? '⏳ Đang train model...' : '🚀 Train Model Phát hiện Bất thường' }}
+            </button>
+
+            <!-- Training Results -->
+            <div v-if="anomalyTrainResult" style="margin-top: 1.5rem;">
+              <h4 style="color: #10B981; font-size: 1.1rem; margin-bottom: 1rem;">✅ Model đã train thành công!</h4>
+
+              <!-- Feature Statistics Table -->
+              <div style="overflow-x: auto; margin-top: 1rem;">
+                <h5 style="color: #FF4444; margin-bottom: 0.5rem;">📊 Ngưỡng an toàn của 14 chỉ số (từ DN khỏe mạnh):</h5>
+                <table class="indicators-table" style="font-size: 0.85rem;">
+                  <thead>
+                    <tr>
+                      <th>Chỉ số</th>
+                      <th>P5</th>
+                      <th>P50 (Trung vị)</th>
+                      <th>P95</th>
+                      <th>Mean</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="stat in anomalyTrainResult.feature_statistics" :key="stat.feature">
+                      <td>
+                        <div style="font-weight: 600;">{{ stat.feature }}</div>
+                        <div style="font-size: 0.8rem; color: #666;">{{ stat.name }}</div>
+                      </td>
+                      <td>{{ stat.P5 }}</td>
+                      <td style="font-weight: 600;">{{ stat.P50 }}</td>
+                      <td>{{ stat.P95 }}</td>
+                      <td>{{ stat.mean }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p style="margin-top: 1rem; color: #666;">
+                <strong>Contamination Rate:</strong> {{ (anomalyTrainResult.contamination_rate * 100).toFixed(1) }}%
+                (Model giả định {{ (anomalyTrainResult.contamination_rate * 100).toFixed(1) }}% DN là bất thường)
+              </p>
+            </div>
+          </div>
+
+          <!-- BƯỚC 2: Upload DN cần kiểm tra -->
+          <div v-if="anomalyTrainResult" class="anomaly-section" style="margin: 3rem 0; border-top: 2px solid #FFE4E1; padding-top: 2rem;">
+            <h3 class="section-title" style="color: #FF4444; font-size: 1.3rem; margin-bottom: 1rem;">
+              🔍 Bước 2: Upload DN cần kiểm tra Bất thường
+            </h3>
+
+            <!-- Chọn nguồn dữ liệu -->
+            <div style="margin-bottom: 1.5rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">
+                Chọn nguồn dữ liệu:
+              </label>
+              <div style="display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                  <input type="radio" value="from_tab" v-model="anomalyDataSource" style="margin-right: 0.5rem;" />
+                  <span>Dùng dữ liệu từ Tab Dự báo PD</span>
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                  <input type="radio" value="upload_file" v-model="anomalyDataSource" style="margin-right: 0.5rem;" />
+                  <span>Tải file mới</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Nếu chọn upload file -->
+            <div v-if="anomalyDataSource === 'upload_file'" style="margin-bottom: 1rem;">
+              <div class="upload-area" @click="$refs.anomalyCheckFileInput.click()" style="cursor: pointer;">
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">{{ anomalyCheckFileName || 'Tải lên file XLSX của DN' }}</p>
+                <p class="upload-hint">File XLSX có 3 sheets: CDKT, BCTN, LCTT</p>
+              </div>
+              <input
+                ref="anomalyCheckFileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleAnomalyCheckFile"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Nếu chọn dùng dữ liệu từ Tab Dự báo PD -->
+            <div v-if="anomalyDataSource === 'from_tab'" style="margin-bottom: 1rem;">
+              <div v-if="!indicatorsDict" class="info-note" style="background: #FFF9E6; border-left: 4px solid #FFC107;">
+                <span class="note-icon">⚠️</span>
+                <span class="note-text">
+                  Chưa có dữ liệu từ Tab Dự báo PD. Vui lòng vào Tab "🔮 Dự Báo PD" để tải file và tính toán 14 chỉ số trước.
+                </span>
+              </div>
+              <div v-else class="info-note" style="background: #E8F5E9; border-left: 4px solid #10B981;">
+                <span class="note-icon">✅</span>
+                <span class="note-text">
+                  Đã tải được 14 chỉ số từ Tab Dự báo PD. Nhấn "Kiểm tra Bất thường" để phân tích.
+                </span>
+              </div>
+            </div>
+
+            <button
+              @click="checkAnomaly"
+              class="btn btn-primary"
+              :disabled="!canCheckAnomaly || isAnomalyChecking"
+              style="width: 100%;"
+            >
+              {{ isAnomalyChecking ? '⏳ Đang kiểm tra...' : '🔍 Kiểm tra Bất thường' }}
+            </button>
+          </div>
+
+          <!-- BƯỚC 3: Kết quả -->
+          <div v-if="anomalyCheckResult" class="anomaly-section" style="margin: 3rem 0; border-top: 2px solid #FFE4E1; padding-top: 2rem;">
+            <h3 class="section-title" style="color: #FF4444; font-size: 1.3rem; margin-bottom: 1.5rem; text-align: center;">
+              📊 Bước 3: Kết quả Phân tích Bất thường
+            </h3>
+
+            <!-- Anomaly Score Gauge -->
+            <div style="margin-bottom: 2rem;">
+              <h4 style="color: #FF4444; font-size: 1.1rem; margin-bottom: 1rem; text-align: center;">
+                🎯 Điểm Bất thường (Anomaly Score)
+              </h4>
+              <div id="anomaly-score-gauge" class="anomaly-score-gauge" style="width: 100%; height: 300px;"></div>
+            </div>
+
+            <!-- Risk Level Badge -->
+            <div style="margin: 2rem 0; text-align: center;">
+              <div class="risk-level-badge" :style="{
+                background: anomalyCheckResult.risk_level_color,
+                color: 'white',
+                padding: '1.5rem 3rem',
+                borderRadius: '16px',
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                display: 'inline-block',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              }">
+                {{ anomalyCheckResult.risk_level_icon }} {{ anomalyCheckResult.risk_level }}
+              </div>
+            </div>
+
+            <!-- Abnormal Features Table -->
+            <div v-if="anomalyCheckResult.abnormal_features.length > 0" style="margin: 2rem 0;">
+              <h4 style="color: #FF4444; font-size: 1.1rem; margin-bottom: 1rem;">
+                ⚠️ Các chỉ số Bất thường ({{ anomalyCheckResult.abnormal_features.length }} chỉ số)
+              </h4>
+              <div style="overflow-x: auto;">
+                <table class="abnormal-features-table">
+                  <thead>
+                    <tr>
+                      <th>Chỉ số</th>
+                      <th>Giá trị hiện tại</th>
+                      <th>P5 (Ngưỡng thấp)</th>
+                      <th>P50 (Trung vị)</th>
+                      <th>P95 (Ngưỡng cao)</th>
+                      <th>Độ lệch (%)</th>
+                      <th>Mức độ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="ab in anomalyCheckResult.abnormal_features"
+                      :key="ab.feature_code"
+                      :class="{ 'severity-high': ab.severity === 'high', 'severity-medium': ab.severity === 'medium' }"
+                    >
+                      <td>
+                        <div style="font-weight: 600;">{{ ab.feature_code }}</div>
+                        <div style="font-size: 0.8rem; color: #666;">{{ ab.feature_name }}</div>
+                      </td>
+                      <td style="font-weight: 600; color: #FF4444;">{{ ab.current_value }}</td>
+                      <td>{{ ab.p5 }}</td>
+                      <td>{{ ab.p50 }}</td>
+                      <td>{{ ab.p95 }}</td>
+                      <td style="font-weight: 600;">
+                        <span v-if="ab.direction === 'low'" style="color: #EF4444;">↓ {{ ab.deviation_percent }}%</span>
+                        <span v-else style="color: #F59E0B;">↑ {{ ab.deviation_percent }}%</span>
+                      </td>
+                      <td>
+                        <span v-if="ab.severity === 'high'" style="color: #EF4444; font-weight: 600;">🔴 Cao</span>
+                        <span v-else style="color: #F59E0B; font-weight: 600;">🔶 Trung bình</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div v-else style="margin: 2rem 0;">
+              <div class="info-note" style="background: #E8F5E9; border-left: 4px solid #10B981;">
+                <span class="note-icon">✅</span>
+                <span class="note-text">
+                  Không phát hiện chỉ số bất thường. Tất cả các chỉ số nằm trong ngưỡng an toàn (P5 - P95).
+                </span>
+              </div>
+            </div>
+
+            <!-- Comparison Radar Chart -->
+            <div style="margin: 2rem 0;">
+              <h4 style="color: #FF4444; font-size: 1.1rem; margin-bottom: 1rem; text-align: center;">
+                📈 So sánh với DN Khỏe mạnh
+              </h4>
+              <div id="comparison-radar-chart" class="comparison-radar-chart" style="width: 100%; height: 500px;"></div>
+            </div>
+
+            <!-- Anomaly Type Badge -->
+            <div style="margin: 2rem 0; text-align: center;">
+              <h4 style="color: #FF4444; font-size: 1.1rem; margin-bottom: 0.5rem;">Loại Bất thường:</h4>
+              <div class="anomaly-type-badge" style="
+                display: inline-block;
+                background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+                color: white;
+                padding: 1rem 2rem;
+                borderRadius: '12px';
+                fontSize: '1.2rem';
+                fontWeight: '600';
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              ">
+                {{ anomalyCheckResult.anomaly_type }}
+              </div>
+              <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                <span v-if="anomalyCheckResult.anomaly_type === 'Normal'">✅ Doanh nghiệp hoạt động bình thường</span>
+                <span v-else-if="anomalyCheckResult.anomaly_type === 'Point Anomaly'">⚠️ Bất thường tại 1 điểm riêng lẻ</span>
+                <span v-else-if="anomalyCheckResult.anomaly_type === 'Contextual Anomaly'">🔶 Bất thường theo ngữ cảnh (2-4 chỉ số)</span>
+                <span v-else-if="anomalyCheckResult.anomaly_type === 'Collective Anomaly'">🔴 Bất thường tập thể (≥5 chỉ số) - Nguy hiểm!</span>
+              </p>
+            </div>
+
+            <!-- Gemini Explanation Box -->
+            <div style="margin: 2rem 0;">
+              <div class="gemini-explanation-box" style="
+                background: linear-gradient(135deg, #FFF5F5 0%, #FFE4E1 100%);
+                border: 3px solid #FFB6C1;
+                borderRadius: '16px';
+                padding: '2rem';
+                boxShadow: '0 4px 12px rgba(255, 182, 193, 0.3)'
+              ">
+                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                  <span style="font-size: 2rem; margin-right: 0.5rem;">🤖</span>
+                  <h4 style="color: #FF4444; font-size: 1.2rem; margin: 0;">Phân tích từ Gemini AI</h4>
+                </div>
+                <div style="line-height: 1.8; color: #333; white-space: pre-wrap;">{{ anomalyCheckResult.gemini_explanation }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -2072,6 +2366,26 @@ export default {
     const ewChatMessages = ref([])
     const ewChatInput = ref('')
     const isEWChatLoading = ref(false)
+
+    // Anomaly Detection System - NEW FEATURE
+    const anomalyTrainFile = ref(null)
+    const anomalyTrainFileName = ref('')
+    const isAnomalyTraining = ref(false)
+    const anomalyTrainResult = ref(null)
+    const anomalyDataSource = ref('from_tab')
+    const anomalyCheckFile = ref(null)
+    const anomalyCheckFileName = ref('')
+    const isAnomalyChecking = ref(false)
+    const anomalyCheckResult = ref(null)
+
+    // Computed: can check anomaly
+    const canCheckAnomaly = computed(() => {
+      if (anomalyDataSource.value === 'from_tab') {
+        return indicatorsDict.value !== null
+      } else {
+        return anomalyCheckFile.value !== null
+      }
+    })
 
     // API Base URL
     const API_BASE = 'http://localhost:8000'
@@ -2707,6 +3021,246 @@ export default {
       } finally {
         isEWChatLoading.value = false
       }
+    }
+
+    // ========================================================================================
+    // ANOMALY DETECTION SYSTEM - METHODS
+    // ========================================================================================
+
+    const handleAnomalyTrainFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        anomalyTrainFile.value = file
+        anomalyTrainFileName.value = file.name
+      }
+    }
+
+    const trainAnomalyModel = async () => {
+      if (!anomalyTrainFile.value) return
+
+      isAnomalyTraining.value = true
+      anomalyTrainResult.value = null
+
+      try {
+        const formData = new FormData()
+        formData.append('file', anomalyTrainFile.value)
+
+        const response = await axios.post(`${API_BASE}/train-anomaly-model`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        if (response.data.status === 'success') {
+          anomalyTrainResult.value = response.data
+          alert('✅ Train Anomaly Detection Model thành công!')
+        }
+      } catch (error) {
+        console.error('Lỗi khi train anomaly model:', error)
+        alert('❌ Lỗi khi train model: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isAnomalyTraining.value = false
+      }
+    }
+
+    const handleAnomalyCheckFile = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        anomalyCheckFile.value = file
+        anomalyCheckFileName.value = file.name
+      }
+    }
+
+    const checkAnomaly = async () => {
+      if (!canCheckAnomaly.value) return
+
+      isAnomalyChecking.value = true
+      anomalyCheckResult.value = null
+
+      try {
+        const formData = new FormData()
+
+        if (anomalyDataSource.value === 'upload_file') {
+          // Upload file mới
+          formData.append('file', anomalyCheckFile.value)
+        } else {
+          // Dùng dữ liệu từ Tab Dự báo PD
+          formData.append('indicators_json', JSON.stringify(indicatorsDict.value))
+        }
+
+        const response = await axios.post(`${API_BASE}/check-anomaly`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        if (response.data.status === 'success') {
+          anomalyCheckResult.value = response.data
+
+          // Đợi DOM cập nhật rồi render charts
+          await nextTick()
+          renderAnomalyScoreGauge()
+          renderComparisonRadarChart()
+        }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra bất thường:', error)
+        alert('❌ Lỗi khi kiểm tra bất thường: ' + (error.response?.data?.detail || error.message))
+      } finally {
+        isAnomalyChecking.value = false
+      }
+    }
+
+    const renderAnomalyScoreGauge = () => {
+      if (!anomalyCheckResult.value) return
+
+      const chartDom = document.getElementById('anomaly-score-gauge')
+      if (!chartDom) return
+
+      const myChart = echarts.init(chartDom)
+      const score = anomalyCheckResult.value.anomaly_score
+
+      const option = {
+        series: [
+          {
+            type: 'gauge',
+            startAngle: 180,
+            endAngle: 0,
+            min: 0,
+            max: 100,
+            splitNumber: 10,
+            axisLine: {
+              lineStyle: {
+                width: 20,
+                color: [
+                  [0.6, '#10B981'],
+                  [0.8, '#F59E0B'],
+                  [1, '#EF4444']
+                ]
+              }
+            },
+            pointer: {
+              icon: 'path://M2090.36389,615.30999 L2090.36389,615.30999 C2091.48372,615.30999 2092.40383,616.194028 2092.44859,617.312956 L2096.90698,728.755929 C2097.05155,732.369577 2094.2393,735.416212 2090.62566,735.56078 C2090.53845,735.564269 2090.45117,735.566014 2090.36389,735.566014 L2090.36389,735.566014 C2086.74736,735.566014 2083.81557,732.63423 2083.81557,729.017692 C2083.81557,728.930412 2083.81732,728.84314 2083.82081,728.755929 L2088.2792,617.312956 C2088.32396,616.194028 2089.24407,615.30999 2090.36389,615.30999 Z',
+              length: '75%',
+              width: 16,
+              offsetCenter: [0, '5%']
+            },
+            axisTick: {
+              length: 12,
+              lineStyle: {
+                color: 'auto',
+                width: 2
+              }
+            },
+            splitLine: {
+              length: 20,
+              lineStyle: {
+                color: 'auto',
+                width: 3
+              }
+            },
+            axisLabel: {
+              color: '#464646',
+              fontSize: 14,
+              distance: -50,
+              formatter: function (value) {
+                return value.toFixed(0)
+              }
+            },
+            title: {
+              offsetCenter: [0, '30%'],
+              fontSize: 16,
+              color: '#FF4444'
+            },
+            detail: {
+              fontSize: 32,
+              offsetCenter: [0, '60%'],
+              valueAnimation: true,
+              formatter: function (value) {
+                return value.toFixed(1)
+              },
+              color: 'auto'
+            },
+            data: [
+              {
+                value: score,
+                name: 'Anomaly Score'
+              }
+            ]
+          }
+        ]
+      }
+
+      myChart.setOption(option)
+    }
+
+    const renderComparisonRadarChart = () => {
+      if (!anomalyCheckResult.value) return
+
+      const chartDom = document.getElementById('comparison-radar-chart')
+      if (!chartDom) return
+
+      const myChart = echarts.init(chartDom)
+
+      const comparison = anomalyCheckResult.value.comparison_with_healthy
+
+      // Tạo indicator data
+      const indicators = comparison.map(item => ({
+        name: item.feature,
+        max: Math.max(Math.abs(item.current), Math.abs(item.healthy_mean)) * 1.5 || 1
+      }))
+
+      // Tạo data series
+      const currentValues = comparison.map(item => item.current)
+      const healthyValues = comparison.map(item => item.healthy_mean)
+
+      const option = {
+        title: {
+          text: ''
+        },
+        legend: {
+          data: ['DN hiện tại', 'DN khỏe mạnh (Mean)'],
+          top: 20
+        },
+        radar: {
+          indicator: indicators,
+          shape: 'polygon',
+          splitNumber: 4
+        },
+        series: [
+          {
+            name: 'So sánh DN',
+            type: 'radar',
+            data: [
+              {
+                value: currentValues,
+                name: 'DN hiện tại',
+                areaStyle: {
+                  color: 'rgba(255, 68, 68, 0.3)'
+                },
+                lineStyle: {
+                  color: '#FF4444',
+                  width: 2
+                },
+                itemStyle: {
+                  color: '#FF4444'
+                }
+              },
+              {
+                value: healthyValues,
+                name: 'DN khỏe mạnh (Mean)',
+                areaStyle: {
+                  color: 'rgba(16, 185, 129, 0.3)'
+                },
+                lineStyle: {
+                  color: '#10B981',
+                  width: 2
+                },
+                itemStyle: {
+                  color: '#10B981'
+                }
+              }
+            ]
+          }
+        ]
+      }
+
+      myChart.setOption(option)
     }
 
     // Chatbot functionality - Macro Tab
@@ -3722,7 +4276,24 @@ export default {
       isEWChatLoading,
       openEWChatbot,
       closeEWChatbot,
-      sendEWChatMessage
+      sendEWChatMessage,
+      // Anomaly Detection System - NEW FEATURE
+      anomalyTrainFile,
+      anomalyTrainFileName,
+      isAnomalyTraining,
+      anomalyTrainResult,
+      anomalyDataSource,
+      anomalyCheckFile,
+      anomalyCheckFileName,
+      isAnomalyChecking,
+      anomalyCheckResult,
+      canCheckAnomaly,
+      handleAnomalyTrainFile,
+      trainAnomalyModel,
+      handleAnomalyCheckFile,
+      checkAnomaly,
+      renderAnomalyScoreGauge,
+      renderComparisonRadarChart
     }
   }
 }
