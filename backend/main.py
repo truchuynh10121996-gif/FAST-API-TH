@@ -24,7 +24,7 @@ from excel_processor import excel_processor
 from report_generator import ReportGenerator
 from early_warning import early_warning_system
 from anomaly_detection import anomaly_system
-# from survival_analysis import survival_system
+from survival_analysis import survival_system
 
 # Khởi tạo FastAPI app
 app = FastAPI(
@@ -1783,10 +1783,10 @@ async def train_survival_model(file: UploadFile = File(...)):
                 )
 
             # Train Survival Analysis System
-            #result = survival_system.train_models(df)
+            result = survival_system.train_models(df)
 
             # Lưu models
-            #survival_system.save_models("survival_models")
+            survival_system.save_models("survival_models")
 
             return {
                 "status": "success",
@@ -1834,17 +1834,15 @@ async def predict_survival(
         import json
 
         # Kiểm tra Survival System đã được train chưa
-        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
-        # Uncomment dòng dưới khi muốn sử dụng survival system
-        # if survival_system.cox_model is None:
-        #     # Thử load từ file
-        #     if os.path.exists("survival_models_cox.pkl"):
-        #         survival_system.load_models("survival_models")
-        #     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
-        )
+        if survival_system.cox_model is None:
+            # Thử load từ file
+            if os.path.exists("survival_models_cox.pkl"):
+                survival_system.load_models("survival_models")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Survival System chưa được train. Vui lòng train model trước."
+                )
 
         # 1. LẤY 14 CHỈ SỐ
         indicators = {}
@@ -1880,7 +1878,7 @@ async def predict_survival(
             )
 
         # 2. DỰ BÁO SURVIVAL CURVE
-        #result = survival_system.predict_survival_curve(indicators, model_type=model_type)
+        result = survival_system.predict_survival_curve(indicators, model_type=model_type)
 
         return {
             "status": "success",
@@ -1905,11 +1903,22 @@ async def get_survival_metrics():
         - c_index: Concordance index
     """
     try:
-        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
-        raise HTTPException(
-            status_code=400,
-            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
-        )
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Survival System chưa được train. Vui lòng train model trước."
+            )
+
+        # Lấy hazard ratios
+        hazard_ratios = survival_system.get_hazard_ratios()
+        c_index = survival_system.cox_model.concordance_index_
+
+        return {
+            "status": "success",
+            "hazard_ratios": hazard_ratios,
+            "c_index": round(c_index, 4)
+        }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1935,11 +1944,27 @@ async def compare_survival(request_data: Dict[str, Any]):
         Dict chứa comparison_data để vẽ chart
     """
     try:
-        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
-        raise HTTPException(
-            status_code=400,
-            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
-        )
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Survival System chưa được train. Vui lòng train model trước."
+            )
+
+        indicators_list = request_data.get('indicators_list', [])
+        if not indicators_list:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu indicators_list trong request"
+            )
+
+        # So sánh survival curves
+        result = survival_system.compare_survival_curves(indicators_list)
+
+        return {
+            "status": "success",
+            **result
+        }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1962,11 +1987,33 @@ async def analyze_survival(request_data: Dict[str, Any]):
         Dict chứa analysis từ Gemini
     """
     try:
-        # NOTE: Survival system hiện đang bị disable vì chưa được implement đầy đủ
-        raise HTTPException(
-            status_code=400,
-            detail="Survival System tạm thời bị tắt. Vui lòng sử dụng các chức năng khác."
+        # Kiểm tra Survival System đã được train chưa
+        if survival_system.cox_model is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Survival System chưa được train. Vui lòng train model trước."
+            )
+
+        indicators = request_data.get('indicators', {})
+        survival_result = request_data.get('survival_result', {})
+
+        if not indicators or not survival_result:
+            raise HTTPException(
+                status_code=400,
+                detail="Thiếu indicators hoặc survival_result trong request"
+            )
+
+        # Phân tích bằng Gemini
+        analysis = survival_system.generate_gemini_analysis(
+            indicators=indicators,
+            survival_result=survival_result,
+            gemini_api_key=GEMINI_API_KEY
         )
+
+        return {
+            "status": "success",
+            "analysis": analysis
+        }
 
     except ValueError as e:
         raise HTTPException(
