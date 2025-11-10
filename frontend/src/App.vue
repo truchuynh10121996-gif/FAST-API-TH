@@ -4287,17 +4287,7 @@ export default {
       anomalyTrainResult,
       anomalyDataSource,
       anomalyCheckFile,
-      anomalyCheckFileName,
-      isSurvivalChatLoading,
-      handleSurvivalTrainFile,
-      trainSurvivalModel,
-      handleSurvivalCheckFile,
-      predictSurvivalCurve,
-      loadHazardRatios,
-      analyzeSurvivalWithGemini,
-      openSurvivalChatbot,
-      closeSurvivalChatbot,
-      sendSurvivalChatMessage
+      anomalyCheckFileName
     }
   }
 }
